@@ -158,14 +158,14 @@ func buildString(build *v1.Build) string {
 	if build.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
   started: %s`,
-			build.Status.StartTimestamp.String(),
+			build.Status.StartTimestamp.Local().String(),
 		)
 	}
 
 	if build.Status.CompletionTimestamp != nil {
 		additional += fmt.Sprintf(`
   completed: %s`,
-			build.Status.CompletionTimestamp.String(),
+			build.Status.CompletionTimestamp.Local().String(),
 		)
 	}
 

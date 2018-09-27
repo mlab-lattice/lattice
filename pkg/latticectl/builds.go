@@ -172,12 +172,12 @@ func buildsTableRows(builds []v1.Build) []printer.TableRow {
 
 		started := "-"
 		if build.Status.StartTimestamp != nil {
-			started = build.Status.StartTimestamp.Format(time.RFC1123)
+			started = build.Status.StartTimestamp.Local().Format(time.RFC1123)
 		}
 
 		completed := "-"
 		if build.Status.CompletionTimestamp != nil {
-			completed = build.Status.CompletionTimestamp.Format(time.RFC1123)
+			completed = build.Status.CompletionTimestamp.Local().Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{

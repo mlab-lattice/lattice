@@ -111,7 +111,7 @@ func transformTeardown(teardown *latticev1.Teardown) (v1.Teardown, error) {
 
 	var completionTimestamp *time.Time
 	if teardown.Status.CompletionTimestamp != nil {
-		startTimestamp = &teardown.Status.CompletionTimestamp.Time
+		completionTimestamp = &teardown.Status.CompletionTimestamp.Time
 	}
 
 	externalTeardown := v1.Teardown{

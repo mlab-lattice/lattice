@@ -59,8 +59,9 @@ container_image(
 )
 
 container_image(
-    name = "base-terraform",
+    name = "base-openssh-client-terraform",
     tars = [
+        "//docker:base-openssh-client",
         ":base-terraform-bin",
         ":base-terraform-modules-kubernetes",
     ],
@@ -73,8 +74,8 @@ lattice_base_go_container_image(
 )
 
 lattice_base_go_container_image(
-    name = "go-terraform",
-    base = ":base-terraform",
+    name = "go-openssh-client-terraform",
+    base = ":base-openssh-client-terraform",
 )
 
 # go images
@@ -93,6 +94,13 @@ kubernetes_go_container_image(
 )
 
 kubernetes_go_container_image(
+    name = "controller-manager",
+    image_name = "controller-manager",
+    base_image = ":go-openssh-client-terraform",
+    path = "cmd/kubernetes/controller-manager",
+)
+
+kubernetes_go_container_image(
     name = "envoy-prepare",
     image_name = "envoy/prepare",
     base_image = ":go-iptables",
@@ -104,13 +112,6 @@ kubernetes_go_container_image(
     image_name = "envoy/xds-api",
     base_image = None,
     path = "cmd/kubernetes/envoy/xdsapi/v2/grpc/per-node",
-)
-
-kubernetes_go_container_image(
-    name = "controller-manager",
-    image_name = "controller-manager",
-    base_image = ":go-terraform",
-    path = "cmd/kubernetes/controller-manager",
 )
 
 kubernetes_go_container_image(

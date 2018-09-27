@@ -7,9 +7,6 @@ all: gazelle \
      build
 
 .PHONY: build
-build: PLATFORM ?=
-build: FEATURES ?=
-build: OUTPUT_USER_ROOT ?=
 build: TARGET ?= //cmd/... //pkg/...
 build:
 	@bazel \
@@ -44,8 +41,6 @@ clean:
 .PHONY: test
 test: TARGET ?= //pkg/...
 test: OUTPUT ?= errors
-build: FEATURES ?=
-test: ARGS ?=
 test: gazelle
 	@bazel test \
 		$(ARGS) \
@@ -111,7 +106,11 @@ git.install-hooks:
 # docgen
 .PHONY: docgen.latticectl
 docgen.latticectl:
-	@bazel build //cmd/latticectl:docgen
+	@bazel build //cmd/latticectl:docs
+
+.PHONY: docgen.latticectl.tar
+docgen.latticectl.tar:
+	@bazel build //cmd/latticectl:docs-tar
 
 
 # local
