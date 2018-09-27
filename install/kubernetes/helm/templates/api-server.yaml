@@ -181,6 +181,17 @@ subjects:
   name: api-server
   namespace: {{ .Values.prefix }}-internal
 ---
+# create auth tokens config map if auth tokens content are present
+{{ if .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-server-auth-tokens
+  namespace: {{ .Values.prefix }}-internal
+data:
+  auth-tokens.csv: {{quote .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents }}
+{{ end }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -210,6 +221,10 @@ spec:
         - {{ .Values.prefix }}
         - --alsologtostderr
         # TODO: add auth here
+        {{ if .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents}}
+        - --token-auth-file
+        - /etc/auth-tokens/auth-tokens.csv
+        {{ end }}
         image: {{ .Values.containerChannel }}/kubernetes/api-server
         imagePullPolicy: Always
         name: api-server
@@ -218,6 +233,16 @@ spec:
           hostPort: {{ .Values.controlPlane.apiServer.port }}
           containerPort: {{ .Values.controlPlane.apiServer.port }}
           name: http
+      # add volume/volume mount for api auth file if auth tokens are present
+      {{ if .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents}}
+        volumeMounts:
+        - name: auth-tokens
+          mountPath: /etc/auth-tokens
+      volumes:
+        - name: auth-tokens
+          configMap:
+            name: api-server-auth-tokens
+      {{ end }}
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: api-server
