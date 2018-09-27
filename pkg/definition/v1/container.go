@@ -114,7 +114,7 @@ type ContainerBuildCommand struct {
 	Environment ContainerBuildEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerBuildEnvironment map[string]*string
+type ContainerBuildEnvironment map[string]string
 
 type containerBuildCommandEncoder struct {
 	Type string `json:"type"`

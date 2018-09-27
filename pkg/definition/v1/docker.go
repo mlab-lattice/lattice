@@ -22,11 +22,76 @@ type DockerFile struct {
 
 type DockerBuildArgs map[string]*string
 
+// DeepCopyInto is a deepcopy function, copying the receiver, writing into out. in must be non-nil.
+// This is implemented here as the deepcopy generator does not properly handle custom types that are
+// maps.
+// Originally it was calling out to val.DeepCopyInto(), where val was a *string.
+func (in DockerBuildArgs) DeepCopyInto(out *DockerBuildArgs) {
+	{
+		in := &in
+		*out = make(DockerBuildArgs, len(*in))
+		for key, val := range *in {
+			var outVal *string
+			if val != nil {
+				outVal = new(string)
+				*outVal = *val
+			}
+			(*out)[key] = outVal
+		}
+		return
+	}
+}
+
 type DockerBuild struct {
 	BuildContext *DockerBuildContext `json:"build_context,omitempty"`
 	DockerFile   *DockerFile         `json:"docker_file,omitempty"`
 	BuildArgs    DockerBuildArgs     `json:"build_args,omitempty"`
 	Options      *DockerBuildOptions `json:"options,omitempty"`
+}
+
+// DeepCopyInto is a deepcopy function, copying the receiver, writing into out. in must be non-nil.
+// This is implemented here as the deepcopy generator does not properly handle custom types that are
+// maps. See the comment in the method implementation.
+// IMPORTANT: if you add any fields to DockerBuild you _must_ _must_ _must_ update this function.
+// a good way to do that is to delete this function, run `make codegen.deepcopy`, copy the generated
+// method to here, and add back in the manually adjusted portion outlined in the comment below.
+func (in *DockerBuild) DeepCopyInto(out *DockerBuild) {
+	*out = *in
+	if in.BuildContext != nil {
+		in, out := &in.BuildContext, &out.BuildContext
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(DockerBuildContext)
+			(*in).DeepCopyInto(*out)
+		}
+	}
+	if in.DockerFile != nil {
+		in, out := &in.DockerFile, &out.DockerFile
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(DockerFile)
+			(*in).DeepCopyInto(*out)
+		}
+	}
+	if in.BuildArgs != nil {
+		in, out := &in.BuildArgs, &out.BuildArgs
+		// This was originally the inlined invalid version of DockerBuildArgs.DeepCopyInto.
+		// Instead we've replaced it with just a call to DeepCopyInto.
+		// Add this back if you need to regenerate this method.
+		(*in).DeepCopyInto(out)
+	}
+	if in.Options != nil {
+		in, out := &in.Options, &out.Options
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(DockerBuildOptions)
+			(*in).DeepCopyInto(*out)
+		}
+	}
+	return
 }
 
 type DockerBuildOptions struct {
