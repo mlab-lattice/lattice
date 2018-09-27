@@ -116,8 +116,9 @@ docgen.latticectl:
 
 # local
 .PHONY: local.up
+test: VM_DRIVER ?= virtualbox
 local.up:
-	$(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
+	@VM_DRIVER=$(VM_DRIVER) $(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
 
 .PHONY: local.down
 local.down:
