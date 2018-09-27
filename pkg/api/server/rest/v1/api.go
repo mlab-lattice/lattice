@@ -1,3 +1,34 @@
+// Lattice API Documentation
+//
+// Welcome to lattice API.
+//
+// Terms Of Service:
+//
+// there are no TOS at this moment, use at your own risk we take no responsibility
+//
+//     Schemes: http, https
+//     Host: <your lattice host>
+//     BasePath: /v1
+//     Version: 0.0.1
+//     License: MIT http://opensource.org/licenses/MIT
+//     Contact: mLab Lattice Team<team@mlab-lattice.org> http://mlab-lattice.org
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - api_key:
+//
+//     SecurityDefinitions:
+//     api_key:
+//          type: apiKey
+//          name: apiKey
+//          in: header
+//
+// swagger:meta
 package v1
 
 import (
@@ -24,16 +55,6 @@ func newLatticeAPI(router *gin.RouterGroup, backend backendv1.Interface, resolve
 	}
 }
 
-// @title Lattice API Docs
-// @version 1.0
-// @description This document describes the lattice API.
-// @termsOfService TBD
-// @license.name Apache 2.0
-// @host localhost:8876
-// @BasePath /v1
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name apiKey
 func (api *LatticeAPI) setupAPI() {
 	api.setupSystemEndpoints()
 	api.setupBuildEndpoints()

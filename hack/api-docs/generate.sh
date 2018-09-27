@@ -30,7 +30,7 @@ clone_or_pull_docs_repo
 
 # generate swagger from go using swaggo/swag
 # we need to cd into the directory first so that swag tool works properly especially with struct field descriptions
-cd $LATTICE_ROOT/pkg/api && swag init -g server/rest/v1/api.go --swagger $DOCS_TARGET_DIR
+cd $LATTICE_ROOT/pkg/api/server/rest && swagger generate spec -m -o $DOCS_TARGET_DIR/swagger.yaml
 
 # generate slate docs from swagger using widdershins
 widdershins $DOCS_TARGET_DIR/swagger.yaml -o $DOCS_REPO_DIR/source/index.html.md --language_tabs "shell:shell"
