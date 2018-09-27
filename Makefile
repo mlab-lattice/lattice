@@ -119,7 +119,8 @@ local.up: VM_DRIVER ?= virtualbox
 local.up:
 	@VM_DRIVER=$(VM_DRIVER) $(DIR)/hack/local/up.sh \
 	    $(addprefix "--set containerChannel=",$(CHANNEL)) \
-	    $(addprefix "--set controlPlane.apiServer.auth.bootstrapTokenFileContents=", $(BOOTSTRAP_TOKEN_FILE_CONTENTS))
+	    $(addprefix "--set controlPlane.apiServer.auth.bootstrapTokenFileContents=", $(BOOTSTRAP_TOKEN_FILE_CONTENTS)) \
+	    $(addprefix "--set controlPlane.apiServer.auth.apiKey=", $(API_AUTH_KEY))
 
 .PHONY: local.down
 local.down:
