@@ -230,6 +230,9 @@ func (b *serviceBackend) transformService(
 	// get service instances
 	instances, err := b.getServiceInstances(id, namespace)
 
+	// get service instance metrics
+	instanceMetrics, err := b.getServiceInstanceMetrics(id, namespace)
+
 	if err != nil {
 		return v1.Service{}, err
 	}
@@ -249,8 +252,9 @@ func (b *serviceBackend) transformService(
 			StaleInstances:       service.Status.StaleInstances,
 			TerminatingInstances: service.Status.TerminatingInstances,
 
-			Ports:     service.Status.Ports,
-			Instances: instances,
+			Ports:           service.Status.Ports,
+			Instances:       instances,
+			InstanceMetrics: instanceMetrics,
 		},
 	}
 	return externalService, nil
@@ -277,6 +281,29 @@ func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {
 }
 
 func (b *serviceBackend) getServiceInstances(id v1.ServiceID, namespace string) ([]string, error) {
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{string(id)})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for service '%v' instances lookup: %v", id, err)
+	}
+
+	selector = selector.Add(*requirement)
+	pods, err := b.backend.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	instances := make([]string, len(pods.Items))
+
+	for i, podItem := range pods.Items {
+		instances[i] = toServiceInstanceShortID(id, podItem.Name)
+	}
+
+	return instances, nil
+}
+
+func (b *serviceBackend) getServiceInstanceMetrics(id v1.ServiceID, namespace string) ([]string, error) {
 
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{string(id)})

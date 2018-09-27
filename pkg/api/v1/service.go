@@ -40,7 +40,8 @@ type ServiceStatus struct {
 
 	Ports map[int32]string `json:"ports"`
 
-	Instances []string `json:"instances"`
+	Instances       []string `json:"instances"`
+	InstanceMetrics []string `json:"instanceMetrics"`
 }
 
 type ServiceFailureInfo struct {
