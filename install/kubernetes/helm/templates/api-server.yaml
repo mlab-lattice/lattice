@@ -219,6 +219,7 @@ spec:
           containerPort: {{ .Values.controlPlane.apiServer.port }}
           name: http
       hostNetwork: true
+      dnsPolicy: Default
       serviceAccountName: api-server
       {{ if ne .Values.cloudProvider.name "local" }}
       tolerations:
