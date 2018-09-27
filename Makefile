@@ -115,9 +115,9 @@ docgen.latticectl.tar:
 
 # local
 .PHONY: local.up
-local.up: CHANNEL=gcr.io/lattice-dev
+local.up: VM_DRIVER ?= virtualbox
 local.up:
-	@$(DIR)/hack/local/up.sh --set containerChannel=$(CHANNEL)
+	@VM_DRIVER=$(VM_DRIVER) $(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
 
 .PHONY: local.down
 local.down:
