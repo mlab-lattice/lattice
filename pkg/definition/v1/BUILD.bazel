@@ -9,6 +9,7 @@ go_library(
         "docker.go",
         "git.go",
         "job.go",
+        "location.go",
         "node_pool.go",
         "reference.go",
         "secret.go",

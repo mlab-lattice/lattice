@@ -11,6 +11,7 @@ const (
 	ComponentTypeContainer        = "container"
 	ContainerBuildTypeCommand     = "command_build"
 	ContainerBuildTypeDockerImage = "docker_image"
+	ContainerBuildTypeDockerBuild = "docker_build"
 )
 
 var ContainerType = component.Type{
@@ -32,6 +33,7 @@ type Container struct {
 type ContainerBuild struct {
 	CommandBuild *ContainerBuildCommand
 	DockerImage  *DockerImage
+	DockerBuild  *DockerBuild
 }
 
 func (b *ContainerBuild) UnmarshalJSON(data []byte) error {
@@ -59,6 +61,15 @@ func (b *ContainerBuild) UnmarshalJSON(data []byte) error {
 		b.DockerImage = i
 		return nil
 
+	case ContainerBuildTypeDockerBuild:
+		var dockerBuild *DockerBuild
+		if err := json.Unmarshal(data, &dockerBuild); err != nil {
+			return err
+		}
+
+		b.DockerBuild = dockerBuild
+		return nil
+
 	default:
 		return fmt.Errorf("unrecognized container build type: %v", e.Type)
 	}
@@ -79,6 +90,12 @@ func (b *ContainerBuild) MarshalJSON() ([]byte, error) {
 			DockerImage: b.DockerImage,
 		}
 
+	case b.DockerBuild != nil:
+		e = &containerBuildDockerBuildEncoder{
+			Type:        ContainerBuildTypeDockerBuild,
+			DockerBuild: b.DockerBuild,
+		}
+
 	default:
 		return nil, fmt.Errorf("container build must have a type")
 	}
@@ -91,11 +108,13 @@ type containerBuildEncoder struct {
 }
 
 type ContainerBuildCommand struct {
-	Source      *ContainerBuildSource `json:"source,omitempty"`
-	BaseImage   DockerImage           `json:"base_image"`
-	Command     []string              `json:"command,omitempty"`
-	Environment ContainerEnvironment  `json:"environment,omitempty"`
+	Source      *ContainerBuildSource     `json:"source,omitempty"`
+	BaseImage   DockerImage               `json:"base_image"`
+	Command     []string                  `json:"command,omitempty"`
+	Environment ContainerBuildEnvironment `json:"environment,omitempty"`
 }
+
+type ContainerBuildEnvironment map[string]*string
 
 type containerBuildCommandEncoder struct {
 	Type string `json:"type"`
@@ -105,6 +124,11 @@ type containerBuildCommandEncoder struct {
 type containerBuildDockerImageEncoder struct {
 	Type string `json:"type"`
 	*DockerImage
+}
+
+type containerBuildDockerBuildEncoder struct {
+	Type string `json:"type"`
+	*DockerBuild
 }
 
 type ContainerBuildSource struct {

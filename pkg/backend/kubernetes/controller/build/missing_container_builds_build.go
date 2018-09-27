@@ -125,9 +125,24 @@ func (c *Controller) hydrateContainerBuild(
 	path tree.Path,
 	containerBuild *definitionv1.ContainerBuild,
 ) (*definitionv1.ContainerBuild, error) {
+	switch {
+	case containerBuild.CommandBuild != nil:
+		return c.hydrateCommandBuild(build, path, containerBuild)
+	case containerBuild.DockerBuild != nil:
+		return c.hydrateDockerBuild(build, path, containerBuild)
+	}
+
+	return containerBuild, nil
+}
+
+func (c *Controller) hydrateCommandBuild(
+	build *latticev1.Build,
+	path tree.Path,
+	containerBuild *definitionv1.ContainerBuild,
+) (*definitionv1.ContainerBuild, error) {
 	// If the container build is a command build and a source wasn't specified,
 	// use the git repository commit context that the definition was resolved from.
-	if containerBuild.CommandBuild == nil || containerBuild.CommandBuild.Source != nil {
+	if containerBuild.CommandBuild.Source != nil {
 		return containerBuild, nil
 	}
 
@@ -140,6 +155,8 @@ func (c *Controller) hydrateContainerBuild(
 		)
 		return nil, err
 	}
+
+	// XXX <GEB>: looks like this mutates the cache anyway since CommandBuild is a pointer?
 
 	// Copy so we don't mutate the cache
 	b := &definitionv1.ContainerBuild{}
@@ -155,6 +172,81 @@ func (c *Controller) hydrateContainerBuild(
 	if i.SSHKeySecret != nil {
 		b.CommandBuild.Source.GitRepository.SSHKey = &definitionv1.SecretRef{
 			Value: *i.SSHKeySecret,
+		}
+	}
+
+	return b, nil
+}
+
+func (c *Controller) hydrateDockerBuild(
+	build *latticev1.Build,
+	path tree.Path,
+	containerBuild *definitionv1.ContainerBuild,
+) (*definitionv1.ContainerBuild, error) {
+	i, ok := build.Status.Definition.Get(path)
+	if !ok {
+		err := fmt.Errorf(
+			"%v resolution info did not have information for %v",
+			build.Description(c.namespacePrefix),
+			path.String(),
+		)
+		return nil, err
+	}
+
+	// XXX <GEB>: looks like this mutates the cache anyway since DockerBuild is a pointer?
+
+	// Copy so we don't mutate the cache
+	b := &definitionv1.ContainerBuild{}
+	*b = *containerBuild
+
+	dockerBuild := b.DockerBuild
+
+	// if BuildContext is nil, initialize it
+	if dockerBuild.BuildContext == nil {
+		dockerBuild.BuildContext = &definitionv1.DockerBuildContext{}
+	}
+
+	if dockerBuild.BuildContext.Path == "" {
+		dockerBuild.BuildContext.Path = definitionv1.DockerBuildDefaultPath
+	}
+
+	// if DockerFile is nil, initialize it
+	if dockerBuild.DockerFile == nil {
+		dockerBuild.DockerFile = &definitionv1.DockerFile{}
+	}
+
+	if dockerBuild.DockerFile.Path == "" {
+		dockerBuild.DockerFile.Path = definitionv1.DockerBuildDefaultPath
+	}
+
+	var sshKey *definitionv1.SecretRef
+	if i.SSHKeySecret != nil {
+		sshKey = &definitionv1.SecretRef{
+			Value: *i.SSHKeySecret,
+		}
+	}
+
+	// if BuildContext.Location is nil, then initialize it to point to the same repo
+	// that its definition was in
+	if dockerBuild.BuildContext.Location == nil {
+		dockerBuild.BuildContext.Location = &definitionv1.Location{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    i.Commit.RepositoryURL,
+				Commit: &i.Commit.Commit,
+				SSHKey: sshKey,
+			},
+		}
+	}
+
+	// if DockerFile.Location is nil, then initialize it to point to the same repo
+	// that its definition was in
+	if dockerBuild.DockerFile.Location == nil {
+		dockerBuild.DockerFile.Location = &definitionv1.Location{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    i.Commit.RepositoryURL,
+				Commit: &i.Commit.Commit,
+				SSHKey: sshKey,
+			},
 		}
 	}
 

@@ -126,6 +126,8 @@ func (r *v1ComponentResolver) resolveReference(
 	}
 
 	// create a new component from the evaluated template
+	// GEB: first validates that the component's api version is supported, then
+	// returns the definition v<N> component for that version
 	c, err := r.resolver.newComponent(evaluated)
 	if err != nil {
 		return err
