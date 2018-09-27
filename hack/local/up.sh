@@ -13,4 +13,5 @@ minikube start \
     --vm-driver ${VM_DRIVER} \
     --feature-gates=CustomResourceSubresources=true
 
+set +u
 ${LATTICE_ROOT}/install/kubernetes/helm/install.sh --set cloudProvider.local.ip=$(minikube ip) ${@}
