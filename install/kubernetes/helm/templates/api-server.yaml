@@ -209,7 +209,10 @@ spec:
         - --namespace-prefix
         - {{ .Values.prefix }}
         - --alsologtostderr
-        # TODO: add auth here
+        {{ if .Values.controlPlane.apiServer.auth.apiKey }}
+        - --api-auth-key
+        - {{ .Values.controlPlane.apiServer.auth.apiKey }}
+        {{ end }}
         image: {{ .Values.containerChannel }}/kubernetes/api-server
         imagePullPolicy: Always
         name: api-server
