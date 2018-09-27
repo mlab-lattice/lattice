@@ -117,7 +117,9 @@ docgen.latticectl:
 # local
 .PHONY: local.up
 local.up:
-	$(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
+	$(DIR)/hack/local/up.sh \
+	    $(addprefix "--set containerChannel=",$(CHANNEL)) \
+        $(addprefix "--set controlPlane.apiServer.auth.bootstrapTokenFileContents=", $(BOOTSTRAP_TOKEN_FILE_CONTENTS |  sed  's/,/\\/g'))
 
 .PHONY: local.down
 local.down:
