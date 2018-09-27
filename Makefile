@@ -106,7 +106,11 @@ git.install-hooks:
 # docgen
 .PHONY: docgen.latticectl
 docgen.latticectl:
-	@bazel build //cmd/latticectl:docgen
+	@bazel build //cmd/latticectl:docs
+
+.PHONY: docgen.latticectl.tar
+docgen.latticectl.tar:
+	@bazel build //cmd/latticectl:docs-tar
 
 
 # local
