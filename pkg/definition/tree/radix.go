@@ -3,6 +3,7 @@ package tree
 import (
 	"encoding/json"
 
+	"fmt"
 	"github.com/armon/go-radix"
 )
 
@@ -106,17 +107,19 @@ type JSONRadix struct {
 }
 
 func (in *JSONRadix) DeepCopyInto(out *JSONRadix) {
-	// not sure what to do about errors here
-	// possible options:
-	//   - do nothing (current impl, not great)
-	//   - panic (not great)
-	//   - have some sort of canary value in ReferenceParameter, so after you can check to see if
-	//     the copy worked
-	//     - not feasible for when ReferenceParameters are deeply nested
-	data, _ := json.Marshal(&in)
 	out.marshaller = in.marshaller
 	out.unmarshaller = in.unmarshaller
-	json.Unmarshal(data, &out)
+
+	// please see https://github.com/mlab-lattice/lattice/issues/239 for more information
+	data, err := json.Marshal(&in)
+	if err != nil {
+		panic(fmt.Sprintf("error marshalling JSONRadix in DeepCopyInto: %v", err))
+	}
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		panic(fmt.Sprintf("error unmarshalling JSONRadix in DeepCopyInto: %v", err))
+	}
+
 	return
 }
 
