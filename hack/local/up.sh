@@ -9,4 +9,4 @@ minikube start \
     --memory 4096 \
     --feature-gates=CustomResourceSubresources=true
 
-${LATTICE_ROOT}/install/kubernetes/helm/install.sh ${@}
+${LATTICE_ROOT}/install/kubernetes/helm/install.sh --set cloudProvider.local.ip=$(minikube ip) ${@}
