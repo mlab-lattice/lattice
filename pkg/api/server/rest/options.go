@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator"
 )
 
 type ServerOptions struct {

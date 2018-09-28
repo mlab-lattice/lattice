@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator"
 	"github.com/mlab-lattice/lattice/pkg/api/server/user"
 )
 
