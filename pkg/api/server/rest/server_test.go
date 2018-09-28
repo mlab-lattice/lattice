@@ -3,12 +3,17 @@ package rest
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
 
 	"encoding/json"
+	"os"
+
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
@@ -17,7 +22,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-	"os"
 )
 
 const (
@@ -28,12 +32,15 @@ const (
 	mockSystemVersion = v1.Version("1.0.0")
 	mockServicePath   = tree.Path("/job")
 
-	mockServerAPIPort = 8876
-	mockServerAPIKey  = "abc"
+	mockServerAPIPort      = 8876
+	mockServerLegacyAPIKey = "abc"
+	mockBearerToken        = "123"
+	mockTokenAuthFile      = "/tmp/lattice/test/api/server/rest/auth-tokens.csv"
+	mockTokensCSV          = "123,test"
 )
 
 var (
-	latticeClient = clientrest.NewBearerTokenClient(mockAPIServerURL, mockServerAPIKey).V1()
+	latticeClient = clientrest.NewBearerTokenClient(mockAPIServerURL, mockBearerToken).V1()
 
 	mockSystemDefURL = fmt.Sprintf("file://%v", mockRepoPath)
 
@@ -80,6 +87,7 @@ var (
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
+	defer teardownMockTest()
 	t.Run("TestMockServer", mockTests)
 }
 
@@ -630,12 +638,30 @@ func authTest(t *testing.T) {
 
 	fmt.Println("Auth success!!")
 
-	fmt.Println("Testing auth with bad API key")
-	badClient := clientrest.NewBearerTokenClient(mockAPIServerURL, "bad api key").V1()
+	fmt.Println("Testing auth with bad bearer token")
+	badClient := clientrest.NewBearerTokenClient(mockAPIServerURL, "bad bearer token").V1()
 	_, err = badClient.Systems().List()
 
 	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
 		t.Fatal("Expected an authentication error")
+	}
+	fmt.Printf("Got an expected authentication failure error: %v\n", err)
+
+	// testing legacy auth
+	legacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, mockServerLegacyAPIKey).V1()
+	_, err = legacyClient.Systems().List()
+
+	if err != nil {
+		t.Fatal("Failed to authenticate with legacy client")
+	}
+
+	fmt.Println("Legacy Auth success!")
+
+	badLegacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, "bad api key").V1()
+	_, err = badLegacyClient.Systems().List()
+
+	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
+		t.Fatal("Expected an authentication error with legact auth")
 	}
 	fmt.Printf("Got an expected authentication failure error: %v\n", err)
 
@@ -680,11 +706,31 @@ func setupMockTest() {
 	)
 
 	b := mockbackend.NewMockBackend(r)
-	go RunNewRestServer(b, r, mockServerAPIPort, mockServerAPIKey)
+	options := NewServerOptions()
+	options.AuthOptions.LegacyAPIAuthKey = mockServerLegacyAPIKey
+
+	// setup bearer token
+	err = ioutil.WriteFile(mockTokenAuthFile, []byte(mockTokensCSV), 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	tokenAuthenticator, err := tokenfile.NewFromCSV(mockTokenAuthFile)
+	if err != nil {
+		panic(err)
+	}
+	options.AuthOptions.Token = tokenAuthenticator
+
+	go RunNewRestServer(b, r, mockServerAPIPort, options)
 	fmt.Println("API server started")
 
 	// wait a second to let server start
 	time.Sleep(time.Second)
+}
+
+func teardownMockTest() {
+	os.RemoveAll(mockRepoPath)
+	os.Remove(mockTokenAuthFile)
 }
 
 func waitFor(condition func() bool, t *testing.T) {

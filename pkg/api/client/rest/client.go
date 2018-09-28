@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	bearerTokenHeader = "API_KEY"
+	legacyAPIKeyHeader = "API_KEY"
+	bearerTokenHeader  = "Authorization"
 )
 
 type Client struct {
@@ -25,10 +26,18 @@ func NewUnauthenticatedClient(url string) *Client {
 	}
 }
 
+func NewLegacyAPIAuthClient(url, apiKey string) *Client {
+	return &Client{
+		restClient: rest.NewInsecureClient(map[string]string{legacyAPIKeyHeader: apiKey}),
+		url:        url,
+	}
+}
+
 func NewBearerTokenClient(url, bearerToken string) *Client {
 	return &Client{
-		restClient: rest.NewInsecureClient(map[string]string{bearerTokenHeader: bearerToken}),
-		url:        url,
+		restClient: rest.NewInsecureClient(
+			map[string]string{bearerTokenHeader: fmt.Sprintf("bearer %v", bearerToken)}),
+		url: url,
 	}
 }
 

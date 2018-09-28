@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -40,6 +41,7 @@ func Command() *cli.RootCommand {
 	var workDirectory string
 	var port int32
 	var apiAuthKey string
+	var tokenAuthFile string
 
 	command := &cli.RootCommand{
 		Name: "api-server",
@@ -68,6 +70,11 @@ func Command() *cli.RootCommand {
 					Usage:   "if supplied, the required value of the API_KEY header",
 					Default: "",
 					Target:  &apiAuthKey,
+				},
+				"token-auth-file": &flags.String{
+					Usage:   "path for token file for bearer token authenticator",
+					Default: "",
+					Target:  &tokenAuthFile,
 				},
 			},
 			Run: func(args []string, flags cli.Flags) error {
@@ -107,9 +114,10 @@ func Command() *cli.RootCommand {
 				if err != nil {
 					return err
 				}
-
+				// construct server options
+				options := createServerOptions(apiAuthKey, tokenAuthFile)
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
-				rest.RunNewRestServer(backend, r, port, apiAuthKey)
+				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
 		},
@@ -146,4 +154,21 @@ func setupSSH() {
 	if err != nil {
 		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
 	}
+}
+
+func createServerOptions(apiAuthKey string, tokenAuthFile string) *rest.ServerOptions {
+	options := rest.NewServerOptions()
+	// enable api authentication key as needed
+	if apiAuthKey != "" {
+		options.AuthOptions.LegacyAPIAuthKey = apiAuthKey
+	}
+
+	if tokenAuthFile != "" {
+		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
+		if err != nil {
+			panic(err)
+		}
+		options.AuthOptions.Token = tokenAuthenticator
+	}
+	return options
 }

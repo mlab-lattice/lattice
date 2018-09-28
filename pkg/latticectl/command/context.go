@@ -11,5 +11,6 @@ type Context struct {
 }
 
 type AuthContext struct {
-	BearerToken *string `json:"bearerToken"`
+	LegacyApiKey *string `json:"legacyApiKey"`
+	BearerToken  *string `json:"bearerToken"`
 }
