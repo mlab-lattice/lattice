@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	//	metrics "k8s.io/metrics"
 )
 
 type serviceBackend struct {
@@ -230,6 +231,10 @@ func (b *serviceBackend) transformService(
 	// get service instances
 	instances, err := b.getServiceInstances(id, namespace)
 
+	if err != nil {
+		return v1.Service{}, err
+	}
+
 	// get service instance metrics
 	instanceMetrics, err := b.getServiceInstanceMetrics(id, namespace)
 
@@ -323,7 +328,7 @@ func (b *serviceBackend) getServiceInstanceMetrics(id v1.ServiceID, namespace st
 		instances[i] = toServiceInstanceShortID(id, podItem.Name)
 	}
 
-	return instances, nil
+	return []string{"8888", "777", "66"}, nil
 }
 
 func toServiceInstanceShortID(serviceID v1.ServiceID, podName string) string {
