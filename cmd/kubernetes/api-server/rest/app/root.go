@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"

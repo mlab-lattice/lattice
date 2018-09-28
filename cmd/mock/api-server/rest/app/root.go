@@ -3,8 +3,8 @@ package app
 import (
 	goflag "flag"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"

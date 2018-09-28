@@ -12,7 +12,7 @@ import (
 	"os"
 
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
