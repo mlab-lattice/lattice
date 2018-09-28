@@ -1,15 +1,17 @@
 package system
 
 import (
+	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
-	"time"
 )
 
 type deployBackend struct {
@@ -132,12 +134,12 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 
 	var startTimestamp *time.Time
 	if deploy.Status.StartTimestamp != nil {
-		startTimestamp = &deploy.Status.StartTimestamp.Time
+		startTimestamp = time.New(deploy.Status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
 	if deploy.Status.CompletionTimestamp != nil {
-		completionTimestamp = &deploy.Status.CompletionTimestamp.Time
+		completionTimestamp = time.New(deploy.Status.CompletionTimestamp.Time)
 	}
 
 	externalDeploy := v1.Deploy{

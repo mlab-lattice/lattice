@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeJob = "job"
 
-var JobType = component.Type{
+var JobType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeJob,
 }
+
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition.Component
 
 type Job struct {
 	Description string
@@ -25,7 +27,7 @@ type Job struct {
 	NodePool tree.PathSubcomponent `json:"node_pool"`
 }
 
-func (j *Job) Type() component.Type {
+func (j *Job) Type() definition.Type {
 	return JobType
 }
 
@@ -76,8 +78,8 @@ func (j *Job) UnmarshalJSON(data []byte) error {
 }
 
 type jobEncoder struct {
-	Type        component.Type `json:"type"`
-	Description string         `json:"description,omitempty"`
+	Type        definition.Type `json:"type"`
+	Description string          `json:"description,omitempty"`
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`

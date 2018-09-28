@@ -256,13 +256,19 @@ docker.sh: docker.save
 	docker run -it --entrypoint sh bazel/docker$(TARGET_DIR):$(TARGET)
 
 
+# codegen
+.PHONY: codegen.deepcopy
+codegen.deepcopy:
+	@$(DIR)/hack/codegen/deepcopy/generate.sh
+
+.PHONY: codegen.kubernetes
+codegen.kubernetes:
+	@KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/codegen/kubernetes/generate.sh
+	@$(MAKE) gazelle
+
+
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
 	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/dependencies/update-kubernetes-version.sh
 	$(MAKE) kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
-
-.PHONY: kubernetes.regenerate-custom-resource-clients
-kubernetes.regenerate-custom-resource-clients:
-	KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/codegen/regenerate.sh
-	@$(MAKE) gazelle

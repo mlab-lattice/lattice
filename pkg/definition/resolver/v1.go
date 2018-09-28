@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver/template"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver/template"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -40,7 +40,7 @@ type v1ComponentResolver struct {
 }
 
 func (r *v1ComponentResolver) Resolve(
-	c component.Interface,
+	c definition.Component,
 	id v1.SystemID,
 	path tree.Path,
 	ctx *resolutionContext,

@@ -3,11 +3,11 @@ package system
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	time "github.com/mlab-lattice/lattice/pkg/util/time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -195,12 +195,12 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 
 	var startTimestamp *time.Time
 	if build.Status.StartTimestamp != nil {
-		startTimestamp = &build.Status.StartTimestamp.Time
+		startTimestamp = time.New(build.Status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
 	if build.Status.CompletionTimestamp != nil {
-		completionTimestamp = &build.Status.CompletionTimestamp.Time
+		completionTimestamp = time.New(build.Status.CompletionTimestamp.Time)
 	}
 
 	externalBuild := v1.Build{
@@ -330,12 +330,12 @@ func transformContainerBuild(id v1.ContainerBuildID, status latticev1.ContainerB
 
 	var startTimestamp *time.Time
 	if status.StartTimestamp != nil {
-		startTimestamp = &status.StartTimestamp.Time
+		startTimestamp = time.New(status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
 	if status.CompletionTimestamp != nil {
-		completionTimestamp = &status.CompletionTimestamp.Time
+		completionTimestamp = time.New(status.CompletionTimestamp.Time)
 	}
 
 	externalBuild := v1.ContainerBuild{

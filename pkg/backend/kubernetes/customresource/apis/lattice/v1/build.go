@@ -5,7 +5,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -51,7 +51,6 @@ type BuildSpec struct {
 	Path    *tree.Path  `json:"path"`
 }
 
-// +k8s:deepcopy-gen=false
 type BuildStatus struct {
 	// Build specs are immutable so no need for ObservedGeneration
 

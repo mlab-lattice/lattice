@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	. "github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
@@ -16,7 +16,7 @@ import (
 	testutil "github.com/mlab-lattice/lattice/pkg/util/test"
 
 	"encoding/json"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	//gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	"os"
 )
@@ -106,7 +106,7 @@ var (
 
 	system1 = &definitionv1.System{
 		Description: "system 1",
-		Components: map[string]component.Interface{
+		Components: map[string]definition.Component{
 			"job":     job1,
 			"service": service1,
 		},
@@ -1043,7 +1043,7 @@ func TestComponentResolver_FileReference(t *testing.T) {
 
 type successfulResolutionTest struct {
 	name     string
-	c        component.Interface
+	c        definition.Component
 	p        tree.Path
 	ctx      *git.CommitReference
 	depth    int
@@ -1074,7 +1074,7 @@ func testResolutionSuccess(t *testing.T, r Interface, test *successfulResolution
 
 type failedResolutionTest struct {
 	name string
-	c    component.Interface
+	c    definition.Component
 	p    tree.Path
 	ctx  *git.CommitReference
 	// TODO(kevindrosendahl): add expected error once errors are classified

@@ -3,6 +3,7 @@ package tree
 import (
 	"encoding/json"
 
+	"fmt"
 	"github.com/armon/go-radix"
 )
 
@@ -25,6 +26,7 @@ func NewRadix() *Radix {
 
 // Radix provides efficient insertion, retrieval, and deletion,
 // as well as prefixed retrieval and deletion on paths.
+// +k8s:deepcopy-gen=false
 type Radix struct {
 	inner *radix.Tree
 }
@@ -102,6 +104,23 @@ type JSONRadix struct {
 	*Radix
 	marshaller   JSONRadixMarshalFn
 	unmarshaller JSONRadixUnmarshalFn
+}
+
+func (in *JSONRadix) DeepCopyInto(out *JSONRadix) {
+	out.marshaller = in.marshaller
+	out.unmarshaller = in.unmarshaller
+
+	// please see https://github.com/mlab-lattice/lattice/issues/239 for more information
+	data, err := json.Marshal(&in)
+	if err != nil {
+		panic(fmt.Sprintf("error marshalling JSONRadix in DeepCopyInto: %v", err))
+	}
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		panic(fmt.Sprintf("error unmarshalling JSONRadix in DeepCopyInto: %v", err))
+	}
+
+	return
 }
 
 // MarshalJSON fulfills the json.Marshaller interface.

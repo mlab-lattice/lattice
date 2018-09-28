@@ -23,6 +23,20 @@ type Template struct {
 	Fields     map[string]interface{}
 }
 
+func (in *Template) DeepCopyInto(out *Template) {
+	// please see https://github.com/mlab-lattice/lattice/issues/239 for more information
+	data, err := json.Marshal(&in)
+	if err != nil {
+		panic(fmt.Sprintf("error marshalling Template in DeepCopyInto: %v", err))
+	}
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		panic(fmt.Sprintf("error unmarshalling Template in DeepCopyInto: %v", err))
+	}
+
+	return
+}
+
 // UnmarshalJSON implements the json.Unmarshaller interface.
 // The JSON should be an object. UnmarshalJSON will see if
 // the object has a parameters field, and if it does try to
