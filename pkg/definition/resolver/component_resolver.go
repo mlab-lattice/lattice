@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/blang/semver"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -22,13 +22,13 @@ const (
 
 type Interface interface {
 	Resolve(
-		c component.Interface,
+		c definition.Component,
 		id v1.SystemID,
 		path tree.Path,
 		ctx *git.CommitReference,
 		depth int,
 	) (*ResolutionTree, error)
-	Versions(component.Interface, semver.Range) ([]string, error)
+	Versions(definition.Component, semver.Range) ([]string, error)
 }
 
 func NewComponentResolver(
@@ -51,7 +51,7 @@ type componentResolver struct {
 }
 
 func (r *componentResolver) Resolve(
-	c component.Interface,
+	c definition.Component,
 	id v1.SystemID,
 	path tree.Path,
 	ctx *git.CommitReference,
@@ -64,7 +64,7 @@ func (r *componentResolver) Resolve(
 	return result, err
 }
 
-func (r *componentResolver) Versions(c component.Interface, rng semver.Range) ([]string, error) {
+func (r *componentResolver) Versions(c definition.Component, rng semver.Range) ([]string, error) {
 	switch typed := c.(type) {
 	case *definitionv1.Reference:
 		return r.v1.Versions(typed, rng)
@@ -75,7 +75,7 @@ func (r *componentResolver) Versions(c component.Interface, rng semver.Range) ([
 }
 
 func (r *componentResolver) resolve(
-	c component.Interface,
+	c definition.Component,
 	id v1.SystemID,
 	path tree.Path,
 	ctx *resolutionContext,
@@ -91,8 +91,8 @@ func (r *componentResolver) resolve(
 	}
 }
 
-func (r *componentResolver) newComponent(m map[string]interface{}) (component.Interface, error) {
-	t, err := component.TypeFromMap(m)
+func (r *componentResolver) newComponent(m map[string]interface{}) (definition.Component, error) {
+	t, err := definition.TypeFromMap(m)
 	if err != nil {
 		return nil, err
 	}

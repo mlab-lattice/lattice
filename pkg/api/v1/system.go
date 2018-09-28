@@ -1,6 +1,6 @@
 package v1
 
-import "time"
+import "github.com/mlab-lattice/lattice/pkg/util/time"
 
 type (
 	SystemID    string

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 	ContainerBuildTypeDockerBuild = "docker_build"
 )
 
-var ContainerType = component.Type{
+var ContainerType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeContainer,
 }
@@ -114,7 +114,7 @@ type ContainerBuildCommand struct {
 	Environment ContainerBuildEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerBuildEnvironment map[string]*string
+type ContainerBuildEnvironment map[string]string
 
 type containerBuildCommandEncoder struct {
 	Type string `json:"type"`

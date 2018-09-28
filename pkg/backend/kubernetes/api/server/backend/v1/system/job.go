@@ -3,7 +3,6 @@ package system
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 	"github.com/satori/go.uuid"
 )
 
@@ -219,12 +219,12 @@ func (b *jobBackend) transformJobRun(
 
 	var startTimestamp *time.Time
 	if status.StartTimestamp != nil {
-		startTimestamp = &status.StartTimestamp.Time
+		startTimestamp = time.New(status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
 	if status.CompletionTimestamp != nil {
-		completionTimestamp = &status.CompletionTimestamp.Time
+		completionTimestamp = time.New(status.CompletionTimestamp.Time)
 	}
 
 	job := v1.Job{

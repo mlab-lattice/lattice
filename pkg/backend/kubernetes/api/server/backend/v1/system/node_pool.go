@@ -5,8 +5,9 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -186,7 +187,7 @@ func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponen
 	var failureInfo *v1.NodePoolFailureInfo
 	if nodePool.Status.FailureInfo != nil {
 		failureInfo = &v1.NodePoolFailureInfo{
-			Time:    nodePool.Status.FailureInfo.Timestamp.Time,
+			Time:    *time.New(nodePool.Status.FailureInfo.Timestamp.Time),
 			Message: nodePool.Status.FailureInfo.Message,
 		}
 	}

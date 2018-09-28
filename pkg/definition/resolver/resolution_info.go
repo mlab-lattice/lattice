@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -14,7 +14,7 @@ import (
 type ResolutionInfo struct {
 	// Component contains the hydrated but unresolved version of the component.
 	// That is, if the component is a v1/system, it may contain unresolved references.
-	Component component.Interface
+	Component definition.Component
 	Commit    *git.CommitReference
 	// TODO(kevindrosendahl): probably want to move this out when we have a more
 	// concrete theory on component resolution secrets.
@@ -41,12 +41,12 @@ func (i *ResolutionInfo) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	t, err := component.TypeFromJSON(d.Component)
+	t, err := definition.TypeFromJSON(d.Component)
 	if err != nil {
 		return err
 	}
 
-	var c component.Interface
+	var c definition.Component
 	switch t.APIVersion {
 	case definitionv1.APIVersion:
 		c, err = definitionv1.NewComponentFromJSON(d.Component)

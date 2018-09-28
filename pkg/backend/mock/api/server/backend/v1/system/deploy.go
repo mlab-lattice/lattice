@@ -48,10 +48,7 @@ func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1
 
 	// copy the deploy so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Deploy)
-	*result = *deploy
-
-	return result, nil
+	return deploy.DeepCopy(), nil
 }
 
 func (b *DeployBackend) List() ([]v1.Deploy, error) {
@@ -65,7 +62,7 @@ func (b *DeployBackend) List() ([]v1.Deploy, error) {
 
 	var deploys []v1.Deploy
 	for _, deploy := range record.Deploys {
-		deploys = append(deploys, *deploy)
+		deploys = append(deploys, *deploy.DeepCopy())
 	}
 
 	return deploys, nil
@@ -87,8 +84,5 @@ func (b *DeployBackend) Get(id v1.DeployID) (*v1.Deploy, error) {
 
 	// copy the deploy so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Deploy)
-	*result = *deploy
-
-	return deploy, nil
+	return deploy.DeepCopy(), nil
 }

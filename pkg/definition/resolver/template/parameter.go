@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
@@ -34,6 +35,20 @@ func (e *ParameterTypeError) Error() string {
 type Parameter struct {
 	Type    ParameterType `json:"type"`
 	Default interface{}   `json:"default,omitempty"`
+}
+
+func (in *Parameter) DeepCopyInto(out *Parameter) {
+	// please see https://github.com/mlab-lattice/lattice/issues/239 for more information
+	data, err := json.Marshal(&in)
+	if err != nil {
+		panic(fmt.Sprintf("error marshalling Parameter in DeepCopyInto: %v", err))
+	}
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		panic(fmt.Sprintf("error unmarshalling Parameter in DeepCopyInto: %v", err))
+	}
+
+	return
 }
 
 func (d Parameter) Validate(assignment interface{}) error {

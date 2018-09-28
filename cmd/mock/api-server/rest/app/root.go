@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/git"

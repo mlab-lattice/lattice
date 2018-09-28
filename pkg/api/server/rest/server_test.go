@@ -17,8 +17,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -52,7 +52,7 @@ var (
 				NumInstances: 1,
 			},
 		},
-		Components: map[string]component.Interface{
+		Components: map[string]definition.Component{
 			"api": &definitionv1.Service{
 				Description:  "api",
 				NumInstances: 1,

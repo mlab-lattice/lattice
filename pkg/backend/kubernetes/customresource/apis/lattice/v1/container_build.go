@@ -68,7 +68,6 @@ func (b *ContainerBuild) Description(namespacePrefix string) string {
 	return fmt.Sprintf("component build %v (system %v)", b.Name, systemID)
 }
 
-// +k8s:deepcopy-gen=false
 type ContainerBuildSpec struct {
 	Definition *definitionv1.ContainerBuild `json:"definition"`
 }

@@ -1,6 +1,7 @@
 package color
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 )
 
@@ -30,4 +31,6 @@ var (
 	IDString                      = color.HiCyanString
 	BoldString                    = color.New(color.Bold).SprintfFunc()
 	BlackString                   = color.New(color.FgHiBlack).SprintfFunc()
+	WhiteString                   = color.New(color.FgHiWhite).SprintfFunc()
+	NormalString                  = fmt.Sprintf
 )

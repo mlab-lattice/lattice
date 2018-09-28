@@ -125,32 +125,11 @@ func WatchBuilds(client client.Interface, system v1.SystemID, format printer.For
 }
 
 func buildsTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "id",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "target",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "started",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "completed",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+	return printer.NewTable(w, []string{"ID", "TARGET", "STATE", "STARTED", "COMPLETED"})
 }
 
-func buildsTableRows(builds []v1.Build) []printer.TableRow {
-	var rows []printer.TableRow
+func buildsTableRows(builds []v1.Build) [][]string {
+	var rows [][]string
 	for _, build := range builds {
 		stateColor := color.WarningString
 		switch build.Status.State {

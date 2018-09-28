@@ -6,7 +6,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +56,6 @@ func (s *System) Description() string {
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
 // the systemSpecEncoder and SystemSpec's UnmarshalJSON
-// +k8s:deepcopy-gen=false
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
@@ -64,7 +63,6 @@ type SystemSpec struct {
 	WorkloadBuildArtifacts *SystemSpecWorkloadBuildArtifacts `json:"workloadBuildArtifacts"`
 }
 
-// +k8s:deepcopy-gen=false
 type SystemSpecWorkloadBuildArtifacts struct {
 	inner *tree.JSONRadix
 }
@@ -126,7 +124,6 @@ func (a *SystemSpecWorkloadBuildArtifacts) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// +k8s:deepcopy-gen=false
 type SystemStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 

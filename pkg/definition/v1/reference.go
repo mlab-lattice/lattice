@@ -4,22 +4,40 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeReference = "reference"
 
-var ReferenceType = component.Type{
+var ReferenceType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeReference,
 }
+
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition.Component
 
 type Reference struct {
 	GitRepository *GitRepositoryReference
 	File          *string
 
-	Parameters map[string]interface{}
+	Parameters ReferenceParameters
+}
+
+type ReferenceParameters map[string]interface{}
+
+func (in *ReferenceParameters) DeepCopyInto(out *ReferenceParameters) {
+	// please see https://github.com/mlab-lattice/lattice/issues/239 for more information
+	data, err := json.Marshal(&in)
+	if err != nil {
+		panic(fmt.Sprintf("error marshalling ReferenceParameters in DeepCopyInto: %v", err))
+	}
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		panic(fmt.Sprintf("error unmarshalling ReferenceParameters in DeepCopyInto: %v", err))
+	}
+
+	return
 }
 
 type GitRepositoryReference struct {
@@ -27,7 +45,7 @@ type GitRepositoryReference struct {
 	*GitRepository
 }
 
-func (r *Reference) Type() component.Type {
+func (r *Reference) Type() definition.Type {
 	return ReferenceType
 }
 
@@ -86,10 +104,10 @@ func (r *Reference) UnmarshalJSON(data []byte) error {
 }
 
 type referenceEncoder struct {
-	Type component.Type `json:"type"`
+	Type definition.Type `json:"type"`
 
 	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
 	File          *string                 `json:"file,omitempty"`
 
-	Parameters map[string]interface{} `json:"parameters"`
+	Parameters ReferenceParameters `json:"parameters"`
 }

@@ -6,7 +6,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"

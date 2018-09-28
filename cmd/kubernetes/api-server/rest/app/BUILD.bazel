@@ -12,7 +12,7 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
         "//pkg/backend/kubernetes/definition/component/resolver:go_default_library",
-        "//pkg/definition/component/resolver:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/util/cli:go_default_library",
         "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/git:go_default_library",

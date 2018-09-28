@@ -15,7 +15,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 

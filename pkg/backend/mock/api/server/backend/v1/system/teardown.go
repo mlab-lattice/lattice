@@ -32,10 +32,7 @@ func (b *TeardownBackend) Create() (*v1.Teardown, error) {
 	// run the teardown
 	b.backend.controller.RunTeardown(teardown, record)
 
-	result := new(v1.Teardown)
-	*result = *teardown
-
-	return result, nil
+	return teardown.DeepCopy(), nil
 }
 
 func (b *TeardownBackend) List() ([]v1.Teardown, error) {
@@ -49,7 +46,7 @@ func (b *TeardownBackend) List() ([]v1.Teardown, error) {
 
 	var teardowns []v1.Teardown
 	for _, teardown := range record.Teardowns {
-		teardowns = append(teardowns, *teardown)
+		teardowns = append(teardowns, *teardown.DeepCopy())
 	}
 
 	return teardowns, nil
@@ -70,8 +67,5 @@ func (b *TeardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
 		return nil, v1.NewInvalidTeardownIDError()
 	}
 
-	result := new(v1.Teardown)
-	*result = *teardown
-
-	return result, nil
+	return teardown.DeepCopy(), nil
 }

@@ -5,8 +5,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -164,7 +164,7 @@ func (c *Controller) getBuildComponent(
 	system *latticev1.System,
 	build *latticev1.Build,
 ) (
-	tree.Path, component.Interface,
+	tree.Path, definition.Component,
 	*git.CommitReference,
 	v1.Version,
 	error,

@@ -127,28 +127,11 @@ func WatchSystems(client client.Interface, format printer.Format, w io.Writer) {
 }
 
 func systemsTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "name",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "definition",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "version",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "status",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+	return printer.NewTable(w, []string{"NAME", "DEFINITION", "VERSION", "STATUS"})
 }
 
-func systemsTableRows(systems []v1.System) []printer.TableRow {
-	var rows []printer.TableRow
+func systemsTableRows(systems []v1.System) [][]string {
+	var rows [][]string
 	for _, system := range systems {
 		var stateColor color.Formatter
 		switch system.Status.State {

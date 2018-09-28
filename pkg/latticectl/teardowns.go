@@ -124,28 +124,11 @@ func WatchTeardowns(client client.Interface, system v1.SystemID, format printer.
 }
 
 func teardownsTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "id",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "started",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "completed",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+	return printer.NewTable(w, []string{"ID", "STATE", "STARTED", "COMPLETED"})
 }
 
-func teardownsTableRows(teardowns []v1.Teardown) []printer.TableRow {
-	var rows []printer.TableRow
+func teardownsTableRows(teardowns []v1.Teardown) [][]string {
+	var rows [][]string
 	for _, teardown := range teardowns {
 		stateColor := color.WarningString
 		switch teardown.Status.State {

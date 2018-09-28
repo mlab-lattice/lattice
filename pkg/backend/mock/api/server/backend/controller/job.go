@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 func (c *Controller) runJob(job *v1.Job) {
@@ -17,9 +18,8 @@ func (c *Controller) runJob(job *v1.Job) {
 	func() {
 		c.registry.Lock()
 		defer c.registry.Unlock()
-		now := time.Now()
 		job.Status.State = v1.JobStateRunning
-		job.Status.StartTimestamp = &now
+		job.Status.StartTimestamp = timeutil.New(time.Now())
 	}()
 
 	// sleep
@@ -27,7 +27,6 @@ func (c *Controller) runJob(job *v1.Job) {
 
 	c.registry.Lock()
 	defer c.registry.Unlock()
-	now := time.Now()
 	job.Status.State = v1.JobStateSucceeded
-	job.Status.CompletionTimestamp = &now
+	job.Status.CompletionTimestamp = timeutil.New(time.Now())
 }
