@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["tokenfile.go"],
-    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile",
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile",
     visibility = ["//visibility:public"],
     deps = ["//pkg/api/server/authentication/user:go_default_library"],
 )
