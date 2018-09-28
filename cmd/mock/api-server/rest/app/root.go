@@ -4,7 +4,7 @@ import (
 	goflag "flag"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/token/tokenfile"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
@@ -61,9 +61,8 @@ func Command() *cli.RootCommand {
 
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				backend := mockbackend.NewMockBackend(r)
-				options := rest.NewServerOptions()
-				// apply auth options based on input
-				applyAuthenticationOptions(options, apiAuthKey, tokenAuthFile)
+				// construct server options
+				options := createServerOptions(apiAuthKey, tokenAuthFile)
 				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
@@ -73,10 +72,11 @@ func Command() *cli.RootCommand {
 	return command
 }
 
-func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, tokenAuthFile string) {
+func createServerOptions(apiAuthKey string, tokenAuthFile string) *rest.ServerOptions {
+	options := rest.NewServerOptions()
 	// enable api authentication key as needed
 	if apiAuthKey != "" {
-		options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+		options.AuthOptions.LegacyAPIAuthKey = apiAuthKey
 	}
 
 	if tokenAuthFile != "" {
@@ -86,5 +86,5 @@ func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, 
 		}
 		options.AuthOptions.Token = tokenAuthenticator
 	}
-
+	return options
 }

@@ -68,7 +68,7 @@ func (c *LatticeCommand) Command() *cli.Command {
 				client = rest.NewBearerTokenClient(context.URL, *context.Auth.BearerToken)
 				break
 			case context.Auth.LegacyApiKey != nil:
-				client = rest.NewLegacyApiAuthClient(context.URL, *context.Auth.LegacyApiKey)
+				client = rest.NewLegacyAPIAuthClient(context.URL, *context.Auth.LegacyApiKey)
 
 			default:
 				return fmt.Errorf("invalid auth options for context %v", contextName)

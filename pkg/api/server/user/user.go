@@ -1,19 +1,19 @@
 package user
 
 type User interface {
-	GetName() string
+	Name() string
 }
 
 type DefaultUser struct {
-	Username string
+	name string
 }
 
 func NewDefaultUser(name string) User {
 	return &DefaultUser{
-		Username: name,
+		name: name,
 	}
 }
 
-func (user *DefaultUser) GetName() string {
-	return user.Username
+func (u *DefaultUser) Name() string {
+	return u.name
 }

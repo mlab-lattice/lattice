@@ -12,7 +12,7 @@ import (
 	"os"
 
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/token/tokenfile"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
@@ -648,7 +648,7 @@ func authTest(t *testing.T) {
 	fmt.Printf("Got an expected authentication failure error: %v\n", err)
 
 	// testing legacy auth
-	legacyClient := clientrest.NewLegacyApiAuthClient(mockAPIServerURL, mockServerLegacyAPIKey).V1()
+	legacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, mockServerLegacyAPIKey).V1()
 	_, err = legacyClient.Systems().List()
 
 	if err != nil {
@@ -657,7 +657,7 @@ func authTest(t *testing.T) {
 
 	fmt.Println("Legacy Auth success!")
 
-	badLegacyClient := clientrest.NewLegacyApiAuthClient(mockAPIServerURL, "bad api key").V1()
+	badLegacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, "bad api key").V1()
 	_, err = badLegacyClient.Systems().List()
 
 	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
@@ -707,7 +707,7 @@ func setupMockTest() {
 
 	b := mockbackend.NewMockBackend(r)
 	options := NewServerOptions()
-	options.AuthOptions.LegacyApiAuthKey = mockServerLegacyAPIKey
+	options.AuthOptions.LegacyAPIAuthKey = mockServerLegacyAPIKey
 
 	// setup bearer token
 	err = ioutil.WriteFile(mockTokenAuthFile, []byte(mockTokensCSV), 0644)

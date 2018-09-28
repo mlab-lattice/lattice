@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	legacyApiKeyHeader = "API_KEY"
+	legacyAPIKeyHeader = "API_KEY"
 	bearerTokenHeader  = "Authorization"
 )
 
@@ -26,9 +26,9 @@ func NewUnauthenticatedClient(url string) *Client {
 	}
 }
 
-func NewLegacyApiAuthClient(url, apiKey string) *Client {
+func NewLegacyAPIAuthClient(url, apiKey string) *Client {
 	return &Client{
-		restClient: rest.NewInsecureClient(map[string]string{legacyApiKeyHeader: apiKey}),
+		restClient: rest.NewInsecureClient(map[string]string{legacyAPIKeyHeader: apiKey}),
 		url:        url,
 	}
 }

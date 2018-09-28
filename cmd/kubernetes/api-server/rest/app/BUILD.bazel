@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/server/rest:go_default_library",
-        "//pkg/api/server/rest/authentication/token/tokenfile:go_default_library",
+        "//pkg/api/server/rest/authentication/authenticator/token/tokenfile:go_default_library",
         "//pkg/backend/kubernetes/api/server/backend:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",

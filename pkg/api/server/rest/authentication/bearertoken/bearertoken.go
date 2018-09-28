@@ -5,20 +5,17 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
+	"github.com/mlab-lattice/lattice/pkg/api/server/user"
 )
 
+// Authenticator implementation for authentication.Request which authenticates requests based on bearer tokens
 type Authenticator struct {
-	token authentication.Token
+	token authenticator.Token
 }
 
-func New(token authentication.Token) (*Authenticator, error) {
-	authenticator := &Authenticator{
-		token: token,
-	}
-
-	return authenticator, nil
+func New(token authenticator.Token) (*Authenticator, error) {
+	return &Authenticator{token: token}, nil
 }
 
 func (authenticator *Authenticator) AuthenticateRequest(c *gin.Context) (user.User, bool, error) {
@@ -42,14 +39,13 @@ func (authenticator *Authenticator) AuthenticateRequest(c *gin.Context) (user.Us
 
 	u, ok, err := authenticator.token.AuthenticateToken(token)
 
+	if err != nil {
+		return nil, false, err
+	}
+
 	if ok {
 		// remove header after successful auth
 		c.Header("Authorization", "")
 	}
-
-	if !ok && err == nil {
-		err = fmt.Errorf("invalid token: %v", err)
-	}
-
-	return u, ok, err
+	return u, ok, nil
 }

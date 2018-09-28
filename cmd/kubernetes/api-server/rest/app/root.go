@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/token/tokenfile"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
@@ -114,8 +114,8 @@ func Command() *cli.RootCommand {
 				if err != nil {
 					return err
 				}
-				options := rest.NewServerOptions()
-				applyAuthenticationOptions(options, apiAuthKey, tokenAuthFile)
+				// construct server options
+				options := createServerOptions(apiAuthKey, tokenAuthFile)
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				rest.RunNewRestServer(backend, r, port, options)
 				return nil
@@ -156,10 +156,11 @@ func setupSSH() {
 	}
 }
 
-func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, tokenAuthFile string) {
+func createServerOptions(apiAuthKey string, tokenAuthFile string) *rest.ServerOptions {
+	options := rest.NewServerOptions()
 	// enable api authentication key as needed
 	if apiAuthKey != "" {
-		options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+		options.AuthOptions.LegacyAPIAuthKey = apiAuthKey
 	}
 
 	if tokenAuthFile != "" {
@@ -169,5 +170,5 @@ func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, 
 		}
 		options.AuthOptions.Token = tokenAuthenticator
 	}
-
+	return options
 }

@@ -7,19 +7,23 @@ import (
 	"io"
 	"os"
 
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/user"
 )
 
+// TokenAuthenticator implementation for authenticator.Token
 type TokenAuthenticator struct {
+	// tokens map
 	tokens map[string]user.User
 }
 
+// New creates a new TokenAuthenticator from a token map
 func New(tokens map[string]user.User) *TokenAuthenticator {
 	return &TokenAuthenticator{
 		tokens: tokens,
 	}
 }
 
+// NewFromCSV creates a new TokenAuthenticator from tokens read from a csv file
 func NewFromCSV(path string) (*TokenAuthenticator, error) {
 	csvFile, err := os.Open(path)
 	if err != nil {
@@ -43,19 +47,17 @@ func NewFromCSV(path string) (*TokenAuthenticator, error) {
 		}
 
 		token := line[0]
-		username := line[1]
-
-		tokens[token] = &user.DefaultUser{
-			Username: username,
-		}
+		name := line[1]
+		tokens[token] = user.NewDefaultUser(name)
 	}
 	return New(tokens), nil
 }
 
-func (authenticator *TokenAuthenticator) AuthenticateToken(token string) (user.User, bool, error) {
-	u, exists := authenticator.tokens[token]
+// AuthenticateToken
+func (a *TokenAuthenticator) AuthenticateToken(token string) (user.User, bool, error) {
+	u, exists := a.tokens[token]
 	if !exists {
-		return nil, false, fmt.Errorf("no such token")
+		return nil, false, nil
 	}
 
 	return u, true, nil

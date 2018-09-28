@@ -7,7 +7,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/apikey"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/bearertoken"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
@@ -47,9 +46,9 @@ func (r *restServer) initAuthenticators(options *ServerOptions) {
 	authenticators := make([]authentication.Request, 0)
 
 	// setup legacy authentication as needed
-	if options.AuthOptions.LegacyApiAuthKey != "" {
+	if options.AuthOptions.LegacyAPIAuthKey != "" {
 		fmt.Println("Setting up authentication with legacy api key header")
-		authenticators = append(authenticators, apikey.New(options.AuthOptions.LegacyApiAuthKey))
+		authenticators = append(authenticators, apikey.New(options.AuthOptions.LegacyAPIAuthKey))
 	}
 
 	// setup bearer token auth as needed
@@ -94,7 +93,7 @@ func (r *restServer) authenticateRequest() gin.HandlerFunc {
 				abortUnauthorized(c)
 				return
 			} else if ok { // Auth Success!
-				fmt.Printf("User %v successfully authenticated\n", userObject.GetName())
+				fmt.Printf("User %v successfully authenticated\n", userObject.Name())
 				// Attach user to current context
 				c.Set(currentUserContextKey, userObject)
 				return
@@ -109,11 +108,4 @@ func (r *restServer) authenticateRequest() gin.HandlerFunc {
 
 func abortUnauthorized(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
-}
-
-func GetCurrentUser(c *gin.Context) user.User {
-	if currentUser, exists := c.Get(currentUserContextKey); exists {
-		return currentUser.(user.User)
-	}
-	return nil
 }

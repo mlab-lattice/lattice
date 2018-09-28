@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
 )
 
 type ServerOptions struct {
@@ -15,6 +15,6 @@ func NewServerOptions() *ServerOptions {
 }
 
 type ServerAuthOptions struct {
-	LegacyApiAuthKey string
-	Token            authentication.Token
+	LegacyAPIAuthKey string
+	Token            authenticator.Token
 }
