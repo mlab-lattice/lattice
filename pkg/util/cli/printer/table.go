@@ -14,17 +14,12 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-type (
-	TableAlignment int
-	TableRow       []string
-)
-
 const (
 	TableAlignLeft  = tablewriter.ALIGN_LEFT
 	TableAlignRight = tablewriter.ALIGN_RIGHT
 )
 
-func NewTable(w io.Writer, columns []TableColumn) *Table {
+func NewTable(w io.Writer, columns []string) *Table {
 	return &Table{
 		columns: columns,
 		writer:  w,
@@ -32,31 +27,26 @@ func NewTable(w io.Writer, columns []TableColumn) *Table {
 }
 
 type Table struct {
-	columns []TableColumn
-	rows    []TableRow
+	columns []string
+	rows    [][]string
 
 	writer     io.Writer
 	lastHeight int
 }
 
-type TableColumn struct {
-	Header    string
-	Alignment TableAlignment
-}
-
-func (t *Table) AppendRow(row TableRow) {
+func (t *Table) AppendRow(row []string) {
 	t.rows = append(t.rows, row)
 }
 
-func (t *Table) AppendRows(rows []TableRow) {
+func (t *Table) AppendRows(rows [][]string) {
 	t.rows = append(t.rows, rows...)
 }
 
 func (t *Table) ClearRows() {
-	t.rows = []TableRow{}
+	t.rows = [][]string{}
 }
 
-func (t *Table) ReplaceRows(rows []TableRow) {
+func (t *Table) ReplaceRows(rows [][]string) {
 	t.ClearRows()
 	t.AppendRows(rows)
 }
@@ -71,21 +61,16 @@ func (t *Table) print(w io.Writer) error {
 	// it so we can write the table to a buffer for Rewrite
 	table := tablewriter.NewWriter(w)
 
-	var headers []string
 	var headerColors []tablewriter.Colors
-	var alignments []int
-	for _, c := range t.columns {
-		headers = append(headers, strings.ToUpper(c.Header))
+	for range t.columns {
 		headerColors = append(headerColors, translateColor(color.Bold))
-		//columnColors = append(columnColors, translateColor(c.Color))
-		alignments = append(alignments, int(c.Alignment))
 	}
 
 	table.SetRowLine(false)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 
-	table.SetHeader(headers)
+	table.SetHeader(t.columns)
 	table.SetAutoFormatHeaders(false)
 	table.SetBorder(false)
 	table.SetCenterSeparator(color.BlackString(" "))
@@ -95,7 +80,6 @@ func (t *Table) print(w io.Writer) error {
 	table.SetReflowDuringAutoWrap(false)
 
 	table.SetHeaderColor(headerColors...)
-	table.SetColumnAlignment(alignments)
 
 	for _, r := range t.rows {
 		table.Append(r)
@@ -128,7 +112,7 @@ func (t *Table) Rewrite() {
 	t.lastHeight = len(strings.Split(output, "\n"))
 }
 
-func (t *Table) Overwrite(rows []TableRow) {
+func (t *Table) Overwrite(rows [][]string) {
 	t.ReplaceRows(rows)
 	t.Rewrite()
 }
