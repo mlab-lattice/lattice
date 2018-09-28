@@ -115,7 +115,7 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 			return nil
 		}
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 

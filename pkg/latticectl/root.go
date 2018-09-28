@@ -14,6 +14,7 @@ var Command = cli.RootCommand{
 			"context":   Context(),
 			"deploy":    Deploy(),
 			"deploys":   Deploys(),
+			"jobs":      Jobs(),
 			"secrets":   Secrets(),
 			"services":  Services(),
 			"systems":   Systems(),

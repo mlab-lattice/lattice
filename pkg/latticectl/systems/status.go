@@ -99,7 +99,7 @@ func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer
 
 		handle(system)
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 

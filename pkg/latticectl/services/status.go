@@ -100,7 +100,7 @@ func WatchService(client client.Interface, system v1.SystemID, id v1.ServiceID, 
 
 		handle(service)
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 
