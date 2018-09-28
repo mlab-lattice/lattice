@@ -124,32 +124,11 @@ func WatchDeploys(client client.Interface, system v1.SystemID, format printer.Fo
 }
 
 func deploysTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "id",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "target",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "started",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "completed",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+	return printer.NewTable(w, []string{"ID", "TARGET", "STATE", "STARTED", "COMPLETED"})
 }
 
-func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
-	var rows []printer.TableRow
+func deploysTableRows(deploys []v1.Deploy) [][]string {
+	var rows [][]string
 	for _, deploy := range deploys {
 		stateColor := color.WarningString
 		switch deploy.Status.State {
