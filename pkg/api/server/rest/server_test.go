@@ -87,8 +87,8 @@ var (
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
+	defer teardownMockTest()
 	t.Run("TestMockServer", mockTests)
-	teardownMockTest()
 }
 
 func mockTests(t *testing.T) {
