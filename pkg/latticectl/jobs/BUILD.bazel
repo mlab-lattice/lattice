@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "command.go",
         "logs.go",
+        "run.go",
         "status.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/jobs",
@@ -12,6 +13,8 @@ go_library(
     deps = [
         "//pkg/api/client:go_default_library",
         "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "//pkg/latticectl/command:go_default_library",
         "//pkg/util/cli:go_default_library",
         "//pkg/util/cli/color:go_default_library",

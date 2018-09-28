@@ -355,8 +355,8 @@ func runJob(t *testing.T) {
 	// create build
 	fmt.Println("Test Run Job")
 	cmd := []string{"echo", "foo"}
-	env := definitionv1.ContainerEnvironment{}
-	job, err := latticeClient.Systems().Jobs(mockSystemID).Create(mockServicePath, cmd, env)
+	env := definitionv1.ContainerExecEnvironment{}
+	job, err := latticeClient.Systems().Jobs(mockSystemID).Run(mockServicePath, cmd, env)
 	checkErr(err, t)
 
 	fmt.Printf("Successfully created job. ID %v\n", job.ID)

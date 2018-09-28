@@ -28,7 +28,7 @@ type jobBackend struct {
 func (b *jobBackend) Run(
 	path tree.Path,
 	command []string,
-	environment definitionv1.ContainerEnvironment,
+	environment definitionv1.ContainerExecEnvironment,
 ) (*v1.Job, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {

@@ -1162,7 +1162,7 @@ func (in *JobRunSpec) DeepCopyInto(out *JobRunSpec) {
 	}
 	if in.Environment != nil {
 		in, out := &in.Environment, &out.Environment
-		*out = make(definition_v1.ContainerEnvironment, len(*in))
+		*out = make(definition_v1.ContainerExecEnvironment, len(*in))
 		for key, val := range *in {
 			(*out)[key] = *val.DeepCopy()
 		}
