@@ -1,9 +1,5 @@
 ---
 platform: linux
-image_resource:
-  type: docker-image
-  source:
-    repository: alpine/git
 inputs:
   - name: lattice-repo
   - name: docgen-binary

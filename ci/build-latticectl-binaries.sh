@@ -23,6 +23,7 @@ fi
 
 make build.platform.all \
     OUTPUT_USER_ROOT=../cli-build-cache \
+    FEATURES=pure \
     TARGET=//cmd/latticectl
 
 declare -a os_list=(
