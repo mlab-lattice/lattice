@@ -1,7 +1,7 @@
 package authenticator
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/api/server/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/user"
 )
 
 // Token interface for a token authenticator

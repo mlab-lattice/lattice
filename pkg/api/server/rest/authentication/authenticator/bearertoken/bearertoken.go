@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator"
-	"github.com/mlab-lattice/lattice/pkg/api/server/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/user"
 )
 
 // Authenticator implementation for authentication.Request which authenticates requests based on bearer tokens

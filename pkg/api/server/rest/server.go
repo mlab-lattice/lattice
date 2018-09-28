@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/apikey"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/bearertoken"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/apikey"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/bearertoken"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
@@ -23,7 +23,7 @@ type restServer struct {
 	router         *gin.Engine
 	backend        backend.Interface
 	resolver       resolver.Interface
-	authenticators []authentication.Request
+	authenticators []authenticator.Request
 }
 
 func RunNewRestServer(backend backend.Interface, resolver resolver.Interface, port int32, options *ServerOptions) {
@@ -43,7 +43,7 @@ func RunNewRestServer(backend backend.Interface, resolver resolver.Interface, po
 }
 func (r *restServer) initAuthenticators(options *ServerOptions) {
 
-	authenticators := make([]authentication.Request, 0)
+	authenticators := make([]authenticator.Request, 0)
 
 	// setup legacy authentication as needed
 	if options.AuthOptions.LegacyAPIAuthKey != "" {
@@ -85,8 +85,8 @@ func (r *restServer) setupAuthentication(router *gin.RouterGroup) {
 // authenticateRequest authenticates the request against the configured authentication api key
 func (r *restServer) authenticateRequest() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		for _, authenticator := range r.authenticators {
-			userObject, ok, err := authenticator.AuthenticateRequest(c)
+		for _, a := range r.authenticators {
+			userObject, ok, err := a.AuthenticateRequest(c)
 
 			if err != nil {
 				fmt.Printf("Failed to authenticated. Got error %v\n", err)

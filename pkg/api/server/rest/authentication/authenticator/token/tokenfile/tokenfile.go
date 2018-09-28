@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/mlab-lattice/lattice/pkg/api/server/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/user"
 )
 
 // TokenAuthenticator implementation for authenticator.Token

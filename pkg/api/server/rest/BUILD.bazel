@@ -11,9 +11,9 @@ go_library(
     deps = [
         "//pkg/api/server/authentication/authenticator:go_default_library",
         "//pkg/api/server/backend:go_default_library",
-        "//pkg/api/server/rest/authentication:go_default_library",
-        "//pkg/api/server/rest/authentication/apikey:go_default_library",
-        "//pkg/api/server/rest/authentication/bearertoken:go_default_library",
+        "//pkg/api/server/rest/authentication/authenticator:go_default_library",
+        "//pkg/api/server/rest/authentication/authenticator/apikey:go_default_library",
+        "//pkg/api/server/rest/authentication/authenticator/bearertoken:go_default_library",
         "//pkg/api/server/rest/v1:go_default_library",
         "//pkg/definition/component/resolver:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",

@@ -1,8 +1,8 @@
-package authentication
+package authenticator
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/lattice/pkg/api/server/user"
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/user"
 )
 
 // Request interface for an authenticator that authenticates requests
