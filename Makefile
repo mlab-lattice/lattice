@@ -270,6 +270,13 @@ codegen.kubernetes:
 	@$(MAKE) gazelle
 
 
+# mock
+.PHONY: mock.run
+mock.run:
+	@$(MAKE) docker.mock.api-server.save
+	docker run --publish 127.0.0.1:8080:8080 bazel/docker/mock:api-server
+
+
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
