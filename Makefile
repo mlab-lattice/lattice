@@ -12,6 +12,7 @@ build:
 	@bazel \
 		$(addprefix --output_user_root=,$(OUTPUT_USER_ROOT)) \
 		build \
+		$(addprefix --strip=,$(STRIP)) \
 		$(addprefix --platforms=@io_bazel_rules_go//go/toolchain:,$(PLATFORM)) \
 		$(addprefix --features=,$(FEATURES)) \
 		$(TARGET)

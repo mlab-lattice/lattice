@@ -15,7 +15,8 @@ controlPlane:
   apiServer:
     port: 80
     auth:
-      bootstrapTokenFileContents:
+      apiKey: null
+      bootstrapTokenFileContents: null
   controllerManager:
 
   affinity: |-
