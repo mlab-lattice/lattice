@@ -23,7 +23,8 @@ fi
 
 make build.platform.all \
     OUTPUT_USER_ROOT=../cli-build-cache \
-    TARGET=//cmd/latticectl
+    TARGET=//cmd/latticectl \
+    FEATURES=pure
 
 declare -a os_list=(
     "darwin"
