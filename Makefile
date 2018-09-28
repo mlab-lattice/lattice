@@ -22,11 +22,11 @@ build.platform.all: build.platform.darwin \
 
 .PHONY: build.platform.darwin
 build.platform.darwin:
-	@$(MAKE) build PLATFORM=darwin_amd64
+	@$(MAKE) build PLATFORM=darwin_amd64 FEATURES=pure
 
 .PHONY: build.platform.linux
 build.platform.linux:
-	@$(MAKE) build PLATFORM=linux_amd64
+	@$(MAKE) build PLATFORM=linux_amd64 FEATURES=pure
 
 .PHONY: gazelle
 gazelle:
