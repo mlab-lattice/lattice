@@ -140,7 +140,7 @@ func (c *Controller) kubeJobSpec(
 	}
 
 	one := int32(1)
-	numRetries := int32(1)
+	numRetries := int32(0)
 	if jobRun.Spec.NumRetries != nil {
 		numRetries = *jobRun.Spec.NumRetries
 	}
