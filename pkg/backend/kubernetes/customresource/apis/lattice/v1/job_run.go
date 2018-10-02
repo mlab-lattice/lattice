@@ -76,9 +76,9 @@ func (s *JobRun) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 type JobRunSpec struct {
 	Definition definitionv1.Job `json:"definition"`
 
-	NumRetries  *int32                            `json:"numRetries"`
-	Command     []string                          `json:"command"`
-	Environment definitionv1.ContainerEnvironment `json:"environment"`
+	NumRetries  *int32                                `json:"numRetries"`
+	Command     []string                              `json:"command"`
+	Environment definitionv1.ContainerExecEnvironment `json:"environment"`
 
 	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`

@@ -140,7 +140,7 @@ func (c *Controller) kubeJobSpec(
 	}
 
 	one := int32(1)
-	numRetries := int32(1)
+	numRetries := int32(0)
 	if jobRun.Spec.NumRetries != nil {
 		numRetries = *jobRun.Spec.NumRetries
 	}
@@ -210,12 +210,22 @@ func (c *Controller) untransformedPodTemplateSpec(
 
 	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
-	// use the supplied command and environment as the job container's exec
 	// copy so we don't mutate the cache
 	jobRun = jobRun.DeepCopy()
-	jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
-		Command:     jobRun.Spec.Command,
-		Environment: jobRun.Spec.Environment,
+	if jobRun.Spec.Definition.Exec == nil {
+		jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
+			Environment: make(definitionv1.ContainerExecEnvironment),
+		}
+	}
+
+	// if a command was passed in, use it instead of the definition's command
+	if jobRun.Spec.Command != nil {
+		jobRun.Spec.Definition.Exec.Command = jobRun.Spec.Command
+	}
+
+	// if environment variables were passed in, set them
+	for k, v := range jobRun.Spec.Environment {
+		jobRun.Spec.Definition.Exec.Environment[k] = v
 	}
 
 	return latticev1.PodTemplateSpecForV1Workload(

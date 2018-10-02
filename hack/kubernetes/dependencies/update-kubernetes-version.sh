@@ -4,7 +4,7 @@ set -e
 set -u
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-LATTICE_ROOT=${DIR}/../..
+LATTICE_ROOT=${DIR}/../../..
 
 gsed -i -E "s/(\"tag\": \"kubernetes-).+(\",)/\1${KUBERNETES_VERSION}\2/g" ${LATTICE_ROOT}/bazel/go/dependencies.bzl
 

@@ -136,11 +136,11 @@ type ContainerBuildSource struct {
 }
 
 type ContainerExec struct {
-	Command     []string             `json:"command"`
-	Environment ContainerEnvironment `json:"environment,omitempty"`
+	Command     []string                 `json:"command"`
+	Environment ContainerExecEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerEnvironment map[string]ValueOrSecret
+type ContainerExecEnvironment map[string]ValueOrSecret
 
 type ContainerPort struct {
 	Protocol       string                       `json:"protocol"`
