@@ -17,9 +17,10 @@ import (
 
 func Run() *cli.Command {
 	var (
-		follow bool
-		path   tree.Path
-		envs   []string
+		envs    []string
+		follow  bool
+		path    tree.Path
+		secrets []string
 	)
 
 	cmd := command.SystemCommand{
@@ -33,6 +34,9 @@ func Run() *cli.Command {
 				Target:   &path,
 				Required: true,
 			},
+			"secret": &flags.StringArray{
+				Target: &secrets,
+			},
 		},
 		Args: cli.Args{AllowAdditional: true},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
@@ -41,6 +45,30 @@ func Run() *cli.Command {
 				parts := strings.Split(val, "=")
 				if len(parts) != 2 {
 					return fmt.Errorf("invalid environment variable format %v. expected name=val", val)
+				}
+
+				value := parts[1]
+				environment[parts[0]] = definitionv1.ValueOrSecret{Value: &value}
+			}
+
+			for _, val := range secrets {
+				parts := strings.Split(val, "=")
+				if len(parts) != 2 {
+					return fmt.Errorf("invalid secret format %v. expected name=/path/to:secret", val)
+				}
+
+				key := parts[0]
+				if _, ok := environment[key]; ok {
+					return fmt.Errorf("key %v set as both plaintext environment variable and secret", key)
+				}
+
+				secret, err := tree.NewPathSubcomponent(parts[1])
+				if err != nil {
+					return fmt.Errorf("invalid secret format %v. expected name=/path/to:secret", val)
+				}
+
+				environment[key] = definitionv1.ValueOrSecret{
+					SecretRef: &definitionv1.SecretRef{Value: secret},
 				}
 			}
 

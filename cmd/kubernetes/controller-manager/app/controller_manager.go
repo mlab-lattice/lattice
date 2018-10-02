@@ -115,7 +115,7 @@ func Command() *cli.RootCommand {
 					return err
 				}
 
-				setupSSH()
+				//setupSSH()
 
 				// TODO: setting stop as nil for now, won't actually need it until leader-election is used
 				ctx, err := createControllerContext(
