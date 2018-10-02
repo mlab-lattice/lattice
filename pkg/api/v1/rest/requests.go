@@ -26,6 +26,7 @@ type RunJobRequest struct {
 	Path        tree.Path                             `json:"path"`
 	Command     []string                              `json:"command,omitempty"`
 	Environment definitionv1.ContainerExecEnvironment `json:"environment,omitempty"`
+	NumRetries  *int32                                `json:"numRetries,omitempty"`
 }
 
 type SetSecretRequest struct {

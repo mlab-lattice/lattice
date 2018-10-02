@@ -2,14 +2,14 @@ package jobs
 
 import (
 	"io"
-	"os"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
-	"time"
+	"os"
 )
 
 func Logs() *cli.Command {
@@ -47,7 +47,6 @@ func Logs() *cli.Command {
 				timestamps,
 				since,
 				int64(tail),
-				os.Stdout,
 			)
 		},
 	}
@@ -65,7 +64,6 @@ func JobLogs(
 	timestamps bool,
 	since string,
 	tail int64,
-	w io.Writer,
 ) error {
 	options := &v1.ContainerLogOptions{
 		Follow:     follow,
@@ -96,7 +94,7 @@ func JobLogs(
 		}
 
 		defer logs.Close()
-		_, err = io.Copy(w, logs)
+		_, err = io.Copy(os.Stdout, logs)
 		return err
 	}
 }

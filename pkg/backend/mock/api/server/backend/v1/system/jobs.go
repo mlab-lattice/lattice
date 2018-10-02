@@ -19,6 +19,7 @@ func (b *JobBackend) Run(
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerExecEnvironment,
+	numRetries *int32,
 ) (*v1.Job, error) {
 	b.backend.registry.Lock()
 	defer b.backend.registry.Unlock()

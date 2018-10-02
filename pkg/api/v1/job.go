@@ -31,6 +31,14 @@ type Job struct {
 type JobStatus struct {
 	State JobState `json:"state"`
 
+	Attempts map[string]JobStatusAttempt `json:"attempts,omitempty"`
+
+	Successes int32 `json:"successes"`
+	Failures  int32 `json:"failures"`
+
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
+}
+
+type JobStatusAttempt struct {
 }

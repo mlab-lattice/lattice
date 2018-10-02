@@ -30,6 +30,7 @@ func (b *jobBackend) Run(
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerExecEnvironment,
+	numRetries *int32,
 ) (*v1.Job, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
@@ -54,6 +55,8 @@ func (b *jobBackend) Run(
 
 			Command:     command,
 			Environment: environment,
+
+			NumRetries: numRetries,
 
 			ContainerBuildArtifacts: job.Spec.ContainerBuildArtifacts,
 		},

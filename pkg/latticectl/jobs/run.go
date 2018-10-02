@@ -2,8 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
@@ -15,12 +13,17 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
+const (
+	numRetriesFlag = "num-retries"
+)
+
 func Run() *cli.Command {
 	var (
-		envs    []string
-		follow  bool
-		path    tree.Path
-		secrets []string
+		envs       []string
+		follow     bool
+		numRetries int32
+		path       tree.Path
+		secrets    []string
 	)
 
 	cmd := command.SystemCommand{
@@ -30,13 +33,12 @@ func Run() *cli.Command {
 				Short:  "e",
 				Target: &envs,
 			},
+			numRetriesFlag: &flags.Int32{Target: &numRetries},
 			"path": &flags.Path{
 				Target:   &path,
 				Required: true,
 			},
-			"secret": &flags.StringArray{
-				Target: &secrets,
-			},
+			"secret": &flags.StringArray{Target: &secrets},
 		},
 		Args: cli.Args{AllowAdditional: true},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
@@ -76,14 +78,19 @@ func Run() *cli.Command {
 				args = nil
 			}
 
+			var numRetriesPtr *int32
+			if flags[numRetriesFlag].Set() {
+				numRetriesPtr = &numRetries
+			}
+
 			return RunJob(
 				ctx.Client,
 				ctx.System,
 				path,
 				args,
 				environment,
+				numRetriesPtr,
 				follow,
-				os.Stdout,
 			)
 		},
 	}
@@ -97,10 +104,10 @@ func RunJob(
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerExecEnvironment,
+	numRetries *int32,
 	follow bool,
-	w io.Writer,
 ) error {
-	job, err := client.V1().Systems().Jobs(system).Run(path, command, environment)
+	job, err := client.V1().Systems().Jobs(system).Run(path, command, environment, numRetries)
 	if err != nil {
 		return err
 	}
@@ -119,6 +126,5 @@ func RunJob(
 		false,
 		"",
 		0,
-		w,
 	)
 }

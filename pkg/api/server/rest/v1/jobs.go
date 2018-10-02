@@ -57,7 +57,7 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 		return
 	}
 
-	job, err := api.backend.Systems().Jobs(systemID).Run(req.Path, req.Command, req.Environment)
+	job, err := api.backend.Systems().Jobs(systemID).Run(req.Path, req.Command, req.Environment, req.NumRetries)
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {

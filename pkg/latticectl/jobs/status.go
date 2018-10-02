@@ -2,8 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
@@ -12,6 +10,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
+	"os"
 )
 
 func Status() *cli.Command {
@@ -36,18 +35,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchJob(ctx.Client, ctx.System, ctx.Job, os.Stdout, format)
+				WatchJob(ctx.Client, ctx.System, ctx.Job, format)
 				return nil
 			}
 
-			return PrintJob(ctx.Client, ctx.System, ctx.Job, os.Stdout, format)
+			return PrintJob(ctx.Client, ctx.System, ctx.Job, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Writer, f printer.Format) error {
+func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, f printer.Format) error {
 	job, err := client.V1().Systems().Jobs(system).Get(id)
 	if err != nil {
 		return err
@@ -55,12 +54,12 @@ func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Wri
 
 	switch f {
 	case printer.FormatTable:
-		dw := jobWriter(w)
+		dw := jobWriter()
 		s := jobString(job)
 		dw.Print(s)
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		j.Print(job)
 
 	default:
@@ -70,11 +69,11 @@ func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Wri
 	return nil
 }
 
-func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Writer, f printer.Format) error {
+func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, f printer.Format) error {
 	var handle func(*v1.Job) bool
 	switch f {
 	case printer.FormatTable:
-		dw := jobWriter(w)
+		dw := jobWriter()
 
 		handle = func(job *v1.Job) bool {
 			s := jobString(job)
@@ -82,11 +81,11 @@ func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Wri
 
 			switch job.Status.State {
 			case v1.JobStateFailed:
-				fmt.Fprint(w, color.BoldHiSuccessString("✘ job failed\n"))
+				fmt.Print(color.BoldHiSuccessString("✘ job failed\n"))
 				return true
 
 			case v1.JobStateSucceeded:
-				fmt.Fprint(w, color.BoldHiSuccessString("✓ job succeeded\n"))
+				fmt.Print(color.BoldHiSuccessString("✓ job succeeded\n"))
 				return true
 			}
 
@@ -94,7 +93,7 @@ func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Wri
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(job *v1.Job) bool {
 			j.Print(job)
 			return false
@@ -119,8 +118,8 @@ func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, w io.Wri
 	}
 }
 
-func jobWriter(w io.Writer) *printer.Custom {
-	return printer.NewCustom(w)
+func jobWriter() *printer.Custom {
+	return printer.NewCustom(os.Stdout)
 }
 
 func jobString(job *v1.Job) string {

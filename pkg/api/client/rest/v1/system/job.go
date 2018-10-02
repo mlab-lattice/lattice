@@ -29,11 +29,17 @@ func NewJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *Job
 	}
 }
 
-func (c *JobClient) Run(path tree.Path, command []string, environment definitionv1.ContainerExecEnvironment) (*v1.Job, error) {
+func (c *JobClient) Run(
+	path tree.Path,
+	command []string,
+	environment definitionv1.ContainerExecEnvironment,
+	numRetries *int32,
+) (*v1.Job, error) {
 	request := &v1rest.RunJobRequest{
 		Path:        path,
 		Command:     command,
 		Environment: environment,
+		NumRetries:  numRetries,
 	}
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
