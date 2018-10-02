@@ -281,4 +281,4 @@ mock.run:
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
 	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/dependencies/update-kubernetes-version.sh
-	$(MAKE) kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
+	$(MAKE) codegen.kubernetes VERSION=$(VERSION)

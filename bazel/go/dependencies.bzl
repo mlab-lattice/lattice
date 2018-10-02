@@ -2,21 +2,48 @@ load("@bazel_gazelle//:deps.bzl", "go_repository", "git_repository")
 
 GO_DEPENDENCIES = {
     "overlaps": {
+        # github.com/stretchr/testify:v1.2.2 -> v1.1.0
+        # k8s.io:v1.10.8 -> 782f4967f2dc4564575ca782fe2d04090b5faca8 (>v1.0.0, <v1.1.0)
+        "github.com/davecgh/go-spew": {
+            "name": "com_github_davecgh_go_spew",
+            "commit": "782f4967f2dc4564575ca782fe2d04090b5faca8",
+            "importpath": "github.com/davecgh/go-spew",
+        },
+
+        # used by us directly and k8s
+        # commit from k8s.io:v1.10.8
+        "github.com/ghodss/yaml": {
+            "name": "com_github_ghodss_yaml",
+            "commit": "73d445a93680fa1a78ae23a5839bad48f32ba1ee",
+            "importpath": "github.com/ghodss/yaml",
+        },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> 342cbe0a04158f6dcb03ca0079991a51a4248c02
-        # k8s.io:v1.9.3 -> c0656edd0d9eab7c66d1eb0c568f9039345796f7
+        # k8s.io:v1.10.8 -> c0656edd0d9eab7c66d1eb0c568f9039345796f7
         "github.com/gogo/protobuf": {
             "name": "com_github_gogo_protobuf",
             "commit": "342cbe0a04158f6dcb03ca0079991a51a4248c02",
             "importpath": "github.com/gogo/protobuf",
             "build_file_proto_mode": "disable",
         },
+
+        # TODO: also included/overwritten by rules_go. should have a policy for this one
         # github.com/envoyproxy/go-control-plane:v0.2 -> ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
         # k8s.io:v1.9.3 -> 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
-#        "github.com/golang/protobuf": {
-#            "name": "com_github_golang_protobuf",
-#            "commit": "b4deda0973fb4c70b50d226b1af49f3da59f5265",
-#            "importpath": "github.com/golang/protobuf",
-#        },
+        #"github.com/golang/protobuf": {
+        #   "name": "com_github_golang_protobuf",
+        #   "commit": "b4deda0973fb4c70b50d226b1af49f3da59f5265",
+        #   "importpath": "github.com/golang/protobuf",
+        #},
+
+        # depended upon by both k8s.io and gin
+        # commit from k8s.io:v1.10.8
+        "github.com/json-iterator/go": {
+            "name": "com_github_json_iterator_go",
+            "commit": "f2b4162afba35581b6d4a50d3b8f34e33c144682",
+            "importpath": "github.com/json-iterator/go",
+        },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> c155da19408a8799da419ed3eeb0cb5db0ad5dbc
         # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> v1.0.3
         "github.com/sirupsen/logrus": {
@@ -24,6 +51,15 @@ GO_DEPENDENCIES = {
             "commit": "c155da19408a8799da419ed3eeb0cb5db0ad5dbc",
             "importpath": "github.com/sirupsen/logrus",
         },
+
+        # depended upon by both k8s.io and gin
+        # commit from k8s.io:v1.10.8
+        "github.com/ugorji/go": {
+            "name": "com_github_ugorji_go",
+            "commit": "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
+            "importpath": "github.com/ugorji/go",
+        },
+
         # github.com/mlab-lattice/lattice -> 81e90905daefcd6fd217b62423c0908922eadb30
         # github.com/envoyproxy/go-control-plane:v0.2 -> 5119cf507ed5294cc409c092980c7497ee5d6fd2
         "golang.org/x/crypto": {
@@ -31,6 +67,7 @@ GO_DEPENDENCIES = {
             "commit": "81e90905daefcd6fd217b62423c0908922eadb30",
             "importpath": "golang.org/x/crypto",
         },
+
         # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> 5561cd9b4330353950f399814f427425c0a26fd2
         # k8s.io:v1.9.3 -> ?
         # github.com/envoyproxy/go-control-plane:v0.2 -> 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
@@ -39,6 +76,7 @@ GO_DEPENDENCIES = {
             "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
             "importpath": "golang.org/x/net",
         },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> 37707fdb30a5b38865cfb95e5aab41707daec7fd
         # k8s.io:v1.9.3 -> 95c6576299259db960f6c5b9b69ea52422860fce
         "golang.org/x/sys": {
@@ -46,6 +84,7 @@ GO_DEPENDENCIES = {
             "commit": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
             "importpath": "golang.org/x/sys",
         },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> e19ae1496984b1c655b8044a65c0300a3c878dd3
         # k8s.io:v1.9.3 -> b19bf474d317b857955b12035d2c5acb57ce8b01
         "golang.org/x/text": {
@@ -53,6 +92,7 @@ GO_DEPENDENCIES = {
             "commit": "e19ae1496984b1c655b8044a65c0300a3c878dd3",
             "importpath": "golang.org/x/text",
         },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> a8101f21cf983e773d0c1133ebc5424792003214
         # k8s.io:v1.9.3 -> 09f6ed296fc66555a25fe4ce95173148778dfa85
         "google.golang.org/genproto": {
@@ -60,6 +100,7 @@ GO_DEPENDENCIES = {
             "commit": "a8101f21cf983e773d0c1133ebc5424792003214",
             "importpath": "google.golang.org/genproto",
         },
+
         # github.com/envoyproxy/go-control-plane:v0.2 -> 1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34
         # k8s.io:v1.9.3 -> 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
         "google.golang.org/grpc": {
@@ -67,12 +108,13 @@ GO_DEPENDENCIES = {
             "commit": "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34",
             "importpath": "google.golang.org/grpc",
         },
-        # github.com/stretchr/testify:v1.2.2 -> v1.1.0
-        # k8s.io:v1.9.3 -> 782f4967f2dc4564575ca782fe2d04090b5faca8 (>v1.0.0, <v1.1.0)
-        "github.com/davecgh/go-spew": {
-            "name": "com_github_davecgh_go_spew",
-            "commit": "782f4967f2dc4564575ca782fe2d04090b5faca8",
-            "importpath": "github.com/davecgh/go-spew",
+
+        # depended upon by both k8s.io and gin
+        # commit from k8s.io:v1.10.8
+        "gopkg.in/yaml.v2": {
+            "name": "in_gopkg_yaml_v2",
+            "commit": "670d4cfef0544295bc27a114dbac37980d83185a",
+            "importpath": "gopkg.in/yaml.v2",
         },
     },
     "github.com/mlab-lattice/lattice": {
@@ -188,19 +230,19 @@ GO_DEPENDENCIES = {
             "name": "io_k8s_api",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.11.0",
+            "tag": "kubernetes-1.10.8",
             "importpath": "k8s.io/api",
         },
         "k8s.io/apimachinery": {
             "name": "io_k8s_apimachinery",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.11.0",
+            "tag": "kubernetes-1.10.8",
             "importpath": "k8s.io/apimachinery",
         },
         "k8s.io/client-go": {
             "name": "io_k8s_client_go",
-            "tag": "kubernetes-1.11.0",
+            "tag": "kubernetes-1.10.8",
             "importpath": "k8s.io/client-go",
         },
 
@@ -415,7 +457,7 @@ GO_DEPENDENCIES = {
         },
     },
 
-    # commits taken from https://github.com/kubernetes/kubernetes/blob/v1.9.3/Godeps/Godeps.json
+    # commits taken from https://github.com/kubernetes/kubernetes/blob/v1.10.8/Godeps/Godeps.json
     "k8s.io": {
         "github.com/emicklei/go-restful": {
             "name": "com_github_emicklei_go_restful",
@@ -426,11 +468,6 @@ GO_DEPENDENCIES = {
             "name": "com_github_emicklei_go_restful_swagger12",
             "commit": "dcef7f55730566d41eae5db10e7d6981829720f6",
             "importpath": "github.com/emicklei/go-restful-swagger12",
-        },
-        "github.com/ghodss/yaml": {
-            "name": "com_github_ghodss_yaml",
-            "commit": "73d445a93680fa1a78ae23a5839bad48f32ba1ee",
-            "importpath": "github.com/ghodss/yaml",
         },
         "github.com/go-openapi/jsonpointer": {
             "name": "com_github_go_openapi_jsonpointer",
@@ -479,20 +516,30 @@ GO_DEPENDENCIES = {
             "commit": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4",
             "importpath": "github.com/hashicorp/golang-lru",
         },
+        "github.com/howeyc/gopass": {
+            "name": "com_github_howeyc_gopass",
+            "commit": "bf9dde6d0d2c004a008c27aaee91170c786f6db8",
+            "importpath": "github.com/howeyc/gopass",
+        },
         "github.com/imdario/mergo": {
             "name": "com_github_imdario_mergo",
             "commit": "6633656539c1639d9d78127b7d47c622b5d7b6dc",
             "importpath": "github.com/imdario/mergo",
         },
-        "github.com/json-iterator/go": {
-            "name": "com_github_json_iterator_go",
-            "commit": "f2b4162afba35581b6d4a50d3b8f34e33c144682",
-            "importpath": "github.com/json-iterator/go",
-        },
         "github.com/mailru/easyjson": {
             "name": "com_github_mailru_easyjson",
             "commit": "2f5df55504ebc322e4d52d34df6a1f5b503bf26d",
             "importpath": "github.com/mailru/easyjson",
+        },
+        "github.com/modern-go/reflect2": {
+            "name": "com_github_modern_go_reflect2",
+            "commit": "05fbef0ca5da472bbf96c9322b84a53edc03c9fd",
+            "importpath": "github.com/modern-go/reflect2",
+        },
+        "github.com/modern-go/concurrent": {
+            "name": "com_github_modern_go_concurrent",
+            "commit": "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
+            "importpath": "github.com/modern-go/concurrent",
         },
         "github.com/pborman/uuid": {
             "name": "com_github_pborman_uuid",
@@ -514,53 +561,31 @@ GO_DEPENDENCIES = {
             "commit": "5bd2802263f21d8788851d5305584c82a5c75d7e",
             "importpath": "github.com/PuerkitoBio/urlesc",
         },
-        # also depended upon by github.com/gin-gonic/gin
-        "github.com/ugorji/go": {
-            "name": "com_github_ugorji_go",
-            "commit": "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
-            "importpath": "github.com/ugorji/go",
-        },
         "golang.org/x/time": {
             "name": "org_golang_x_time",
             "commit": "f51c12702a4d776e4c1fa9b0fabab841babae631",
             "importpath": "golang.org/x/time",
         },
-#        "golang.org/x/tools": {
-#            "name": "org_golang_x_tools",
-#            "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
-#            "importpath": "golang.org/x/tools",
-#        },
+        "golang.org/x/tools": {
+            "name": "org_golang_x_tools",
+            "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
+            "importpath": "golang.org/x/tools",
+        },
         "gopkg.in/inf.v0": {
             "name": "in_gopkg_inf_v0",
             "commit": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4",
             "importpath": "gopkg.in/inf.v0",
         },
-        # also depended upon by github.com/gin-gonic/gin
-        "gopkg.in/yaml.v2": {
-            "name": "in_gopkg_yaml_v2",
-            "commit": "670d4cfef0544295bc27a114dbac37980d83185a",
-            "importpath": "gopkg.in/yaml.v2",
-        },
         "k8s.io/apiserver": {
             "name": "io_k8s_apiserver",
-            "tag": "kubernetes-1.11.0",
+            "tag": "kubernetes-1.10.8",
             "importpath": "k8s.io/apiserver",
         },
         "k8s.io/kube-openapi": {
             "name": "io_k8s_kube_openapi",
-            "commit": "91cfa479c814065e420cee7ed227db0f63a5854e",
+            "commit": "39cb288412c48cb533ba4be5d6c28620b9a0c1b4",
             "importpath": "k8s.io/kube-openapi",
         },
-        "github.com/modern-go/reflect2": {
-            "name": "com_github_modern_go_reflect2",
-            "commit": "05fbef0ca5da472bbf96c9322b84a53edc03c9fd",
-            "importpath": "github.com/modern-go/reflect2",
-        },
-        "github.com/modern-go/concurrent": {
-            "name": "com_github_modern_go_concurrent",
-            "commit": "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
-            "importpath": "github.com/modern-go/concurrent",
-        }
     },
     
     "github.com/stretchr/testify": {
