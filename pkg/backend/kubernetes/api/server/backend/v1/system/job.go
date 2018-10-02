@@ -18,6 +18,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/util/time"
 	"github.com/satori/go.uuid"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 type jobBackend struct {
@@ -36,25 +37,10 @@ func (b *jobBackend) Run(
 	}
 
 	namespace := b.backend.systemNamespace(b.system)
-
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
-	if err != nil {
-		return nil, fmt.Errorf("error creating requirement for job %v/%v lookup: %v", namespace, path.String(), err)
-	}
-	selector = selector.Add(*requirement)
-
-	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	job, err := b.getJob(path, namespace)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(jobs.Items) != 1 {
-		err := fmt.Errorf("expected to find a job for %v in %v but found %v", path.String(), namespace, len(jobs.Items))
-		return nil, err
-	}
-
-	job := jobs.Items[0]
 
 	jobRun := &latticev1.JobRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -155,12 +141,18 @@ func (b *jobBackend) Logs(
 
 	_, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, v1.NewInvalidJobIDError()
+		}
 		return nil, err
 	}
 
 	pod, err := b.findJobPod(id, namespace)
-
 	if err != nil {
+		// FIXME(kevindrosendahl): this will always fail with a retry policy > 0 and a failed attempt
+		if err == noJobPodErr || err == multipleJobPodsErr {
+			return nil, v1.NewInvalidInstanceError()
+		}
 		return nil, err
 	}
 
@@ -176,9 +168,48 @@ func (b *jobBackend) Logs(
 	podLogOptions.Container = container
 
 	req := b.backend.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
-	return req.Stream()
+	r, err := req.Stream()
+	if err != nil {
+		// TODO(kevindrosendahl): a BadRequest error is returned when trying tail the logs of a
+		//                        container that is still creating. probably want to see if there's
+		//                        a way other than matching against the err.Message
+		if errors.IsBadRequest(err) {
+			return nil, v1.NewInvalidInstanceError()
+		}
+	}
 
+	return r, err
 }
+
+func (b *jobBackend) getJob(path tree.Path, namespace string) (*latticev1.Job, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for job %v/%v lookup: %v", namespace, path.String(), err)
+	}
+	selector = selector.Add(*requirement)
+
+	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobs.Items) == 0 {
+		return nil, v1.NewInvalidPathError()
+	}
+
+	if len(jobs.Items) != 1 {
+		err := fmt.Errorf("expected to find a job for %v in %v but found %v", path.String(), namespace, len(jobs.Items))
+		return nil, err
+	}
+
+	return &jobs.Items[0], nil
+}
+
+var (
+	noJobPodErr        = fmt.Errorf("no pods found for job")
+	multipleJobPodsErr = fmt.Errorf("multiple pods found for job")
+)
 
 // findServicePod finds service pod by instance id or service's single pod if id was not specified
 func (b *jobBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, error) {
@@ -195,15 +226,14 @@ func (b *jobBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, 
 	}
 
 	if len(pods.Items) > 1 {
-		return nil, fmt.Errorf("found multiple pods for %v/%v", namespace, jobID)
+		return nil, multipleJobPodsErr
 	}
 
 	if len(pods.Items) == 0 {
-		return nil, fmt.Errorf("no pods for %v/%v", namespace, jobID)
+		return nil, noJobPodErr
 	}
 
 	return &pods.Items[0], nil
-
 }
 
 func (b *jobBackend) transformJobRun(
