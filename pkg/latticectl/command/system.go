@@ -6,6 +6,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
+// SystemCommandContext contains the information available to any LatticeCommand.
+type SystemCommandContext struct {
+	*LatticeCommandContext
+	System v1.SystemID
+}
+
+// SystemCommand is a Command that acts on a specific system in a specific lattice.
+// More practically, it is a valid LatticeCommand and also validates that a system was specified.
 type SystemCommand struct {
 	Name                   string
 	Short                  string
@@ -17,16 +25,13 @@ type SystemCommand struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type SystemCommandContext struct {
-	*LatticeCommandContext
-	System v1.SystemID
-}
-
+// Command returns a cli.Command for the SystemCommand.
 func (c *SystemCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}
 
+	// allow system to be overridden via flag
 	var system string
 	c.Flags[SystemFlagName] = SystemFlag(&system)
 
@@ -39,8 +44,8 @@ func (c *SystemCommand) Command() *cli.Command {
 		Run: func(ctx *LatticeCommandContext, args []string, f cli.Flags) error {
 			system := v1.SystemID(system)
 
-			// Try to retrieve the lattice from the context if there is one
-			if system == "" {
+			// if no system was explicitly set, check the context
+			if !f[SystemFlagName].Set() {
 				system = ctx.Context.System
 			}
 

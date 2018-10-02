@@ -12,6 +12,7 @@ import (
 
 	"github.com/buger/goterm"
 	"github.com/olekukonko/tablewriter"
+	"os"
 )
 
 const (
@@ -91,6 +92,10 @@ func (t *Table) print(w io.Writer) error {
 }
 
 func (t *Table) Rewrite() {
+	if t.writer != os.Stdout {
+		panic("cannot call Rewrite on a writer that is not stdout")
+	}
+
 	// read the new printer's output
 	var b bytes.Buffer
 	t.print(&b)

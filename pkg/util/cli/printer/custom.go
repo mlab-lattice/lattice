@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/buger/goterm"
@@ -27,6 +28,10 @@ func (t *Custom) print(w io.Writer, v string) {
 }
 
 func (t *Custom) Overwrite(v string) {
+	if t.writer != os.Stdout {
+		panic("cannot call Overwrite on a writer that is not stdout")
+	}
+
 	// read the new printer's output
 	var b bytes.Buffer
 	t.print(&b, v)

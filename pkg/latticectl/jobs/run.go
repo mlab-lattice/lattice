@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
@@ -91,6 +93,7 @@ func Run() *cli.Command {
 				environment,
 				numRetriesPtr,
 				follow,
+				os.Stdout,
 			)
 		},
 	}
@@ -106,6 +109,7 @@ func RunJob(
 	environment definitionv1.ContainerExecEnvironment,
 	numRetries *int32,
 	follow bool,
+	w io.Writer,
 ) error {
 	job, err := client.V1().Systems().Jobs(system).Run(path, command, environment, numRetries)
 	if err != nil {
@@ -126,5 +130,6 @@ func RunJob(
 		false,
 		"",
 		0,
+		w,
 	)
 }

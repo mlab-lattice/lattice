@@ -16,14 +16,17 @@ const (
 	WatchFlagName   = "watch"
 )
 
+// ConfigFlag returns the canonical flag for specifying a config file.
 func ConfigFlag(target *string) *flags.String {
 	return &flags.String{Target: target}
 }
 
+// ContextFlag returns the canonical flag for specifying a context.
 func ContextFlag(target *string) *flags.String {
 	return &flags.String{Target: target}
 }
 
+// OutputFlag returns the canonical flag for specifying an output format.
 func OutputFlag(target *string, supported []printer.Format, defaultFormat printer.Format) *flags.String {
 	usage := "Set the output format of the command. Valid options: "
 
@@ -42,17 +45,17 @@ func OutputFlag(target *string, supported []printer.Format, defaultFormat printe
 	}
 }
 
+// SidecarFlag returns the canonical flag for specifying a sidecar.
 func SidecarFlag(target *string) *flags.String {
 	return &flags.String{Target: target}
 }
 
+// SystemFlag returns the canonical flag for specifying a system.
 func SystemFlag(target *string) *flags.String {
-	return &flags.String{
-		Required: false,
-		Target:   target,
-	}
+	return &flags.String{Target: target}
 }
 
+// WatchFlag returns the canonical flag for specifying the command is a watch	.
 func WatchFlag(target *bool) *flags.Bool {
 	return &flags.Bool{
 		Short:    "w",
