@@ -21,7 +21,6 @@ func Command() *cli.RootCommand {
 
 	var (
 		port          int32
-		apiAuthKey    string
 		tokenAuthFile string
 		workDirectory string
 	)
@@ -34,11 +33,6 @@ func Command() *cli.RootCommand {
 					Usage:   "port to bind to",
 					Default: 8080,
 					Target:  &port,
-				},
-				"api-auth-key": &flags.String{
-					Usage:   "if supplied, the required value of the API_KEY header",
-					Default: "",
-					Target:  &apiAuthKey,
 				},
 				"token-auth-file": &flags.String{
 					Usage:   "path for token file for bearer token authenticator",
@@ -62,7 +56,7 @@ func Command() *cli.RootCommand {
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				backend := mockbackend.NewMockBackend(r)
 				// construct server options
-				options := createServerOptions(apiAuthKey, tokenAuthFile)
+				options := createServerOptions(tokenAuthFile)
 				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
@@ -72,13 +66,10 @@ func Command() *cli.RootCommand {
 	return command
 }
 
-func createServerOptions(apiAuthKey string, tokenAuthFile string) *rest.ServerOptions {
+func createServerOptions(tokenAuthFile string) *rest.ServerOptions {
 	options := rest.NewServerOptions()
-	// enable api authentication key as needed
-	if apiAuthKey != "" {
-		options.AuthOptions.LegacyAPIAuthKey = apiAuthKey
-	}
 
+	// enable api authentication key as needed
 	if tokenAuthFile != "" {
 		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
 		if err != nil {

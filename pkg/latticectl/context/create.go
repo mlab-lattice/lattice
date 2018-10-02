@@ -21,7 +21,6 @@ func Create() *cli.Command {
 	var (
 		bearerToken     string
 		configPath      string
-		legacyAPIKey    string
 		name            string
 		system          string
 		unauthenticated bool
@@ -36,7 +35,6 @@ func Create() *cli.Command {
 				Required: true,
 				Target:   &name,
 			},
-			flagLegacyAPIKey:       &flags.String{Target: &legacyAPIKey},
 			command.SystemFlagName: command.SystemFlag(&system),
 			flagUnauthenticated:    &flags.Bool{Target: &unauthenticated},
 			flagURL: &flags.String{
@@ -66,9 +64,6 @@ func Create() *cli.Command {
 			switch {
 			case bearerToken != "":
 				auth = &command.AuthContext{BearerToken: &bearerToken}
-
-			case legacyAPIKey != "":
-				auth = &command.AuthContext{LegacyApiKey: &legacyAPIKey}
 			}
 
 			context := &command.Context{

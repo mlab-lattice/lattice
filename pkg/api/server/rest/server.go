@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
-	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/apikey"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/bearertoken"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
@@ -44,12 +43,6 @@ func RunNewRestServer(backend backend.Interface, resolver resolver.Interface, po
 func (r *restServer) initAuthenticators(options *ServerOptions) {
 
 	authenticators := make([]authenticator.Request, 0)
-
-	// setup legacy authentication as needed
-	if options.AuthOptions.LegacyAPIAuthKey != "" {
-		fmt.Println("Setting up authentication with legacy api key header")
-		authenticators = append(authenticators, apikey.New(options.AuthOptions.LegacyAPIAuthKey))
-	}
 
 	// setup bearer token auth as needed
 	if options.AuthOptions.Token != nil {

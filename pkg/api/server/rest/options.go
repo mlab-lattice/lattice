@@ -15,6 +15,5 @@ func NewServerOptions() *ServerOptions {
 }
 
 type ServerAuthOptions struct {
-	LegacyAPIAuthKey string
-	Token            authenticator.Token
+	Token authenticator.Token
 }

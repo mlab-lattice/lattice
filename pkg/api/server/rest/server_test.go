@@ -32,11 +32,10 @@ const (
 	mockSystemVersion = v1.Version("1.0.0")
 	mockServicePath   = tree.Path("/job")
 
-	mockServerAPIPort      = 8876
-	mockServerLegacyAPIKey = "abc"
-	mockBearerToken        = "123"
-	mockTokenAuthFile      = "/tmp/lattice/test/api/server/rest/auth-tokens.csv"
-	mockTokensCSV          = "123,test"
+	mockServerAPIPort = 8876
+	mockBearerToken   = "123"
+	mockTokenAuthFile = "/tmp/lattice/test/api/server/rest/auth-tokens.csv"
+	mockTokensCSV     = "123,test"
 )
 
 var (
@@ -646,25 +645,6 @@ func authTest(t *testing.T) {
 		t.Fatal("Expected an authentication error")
 	}
 	fmt.Printf("Got an expected authentication failure error: %v\n", err)
-
-	// testing legacy auth
-	legacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, mockServerLegacyAPIKey).V1()
-	_, err = legacyClient.Systems().List()
-
-	if err != nil {
-		t.Fatal("Failed to authenticate with legacy client")
-	}
-
-	fmt.Println("Legacy Auth success!")
-
-	badLegacyClient := clientrest.NewLegacyAPIAuthClient(mockAPIServerURL, "bad api key").V1()
-	_, err = badLegacyClient.Systems().List()
-
-	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
-		t.Fatal("Expected an authentication error with legact auth")
-	}
-	fmt.Printf("Got an expected authentication failure error: %v\n", err)
-
 }
 
 func checkErr(err error, t *testing.T) {
@@ -707,7 +687,6 @@ func setupMockTest() {
 
 	b := mockbackend.NewMockBackend(r)
 	options := NewServerOptions()
-	options.AuthOptions.LegacyAPIAuthKey = mockServerLegacyAPIKey
 
 	// setup bearer token
 	err = ioutil.WriteFile(mockTokenAuthFile, []byte(mockTokensCSV), 0644)

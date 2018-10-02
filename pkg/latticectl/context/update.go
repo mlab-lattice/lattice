@@ -11,7 +11,6 @@ func Update() *cli.Command {
 	var (
 		bearerToken     string
 		configPath      string
-		legacyAPIKey    string
 		name            string
 		system          string
 		unauthenticated bool
@@ -22,7 +21,6 @@ func Update() *cli.Command {
 		Flags: cli.Flags{
 			command.ConfigFlagName: command.ConfigFlag(&configPath),
 			flagBearerToken:        &flags.String{Target: &bearerToken},
-			flagLegacyAPIKey:       &flags.String{Target: &legacyAPIKey},
 			flagName:               &flags.String{Target: &name},
 			command.SystemFlagName: command.SystemFlag(&system),
 			flagUnauthenticated:    &flags.Bool{Target: &unauthenticated},
@@ -49,9 +47,6 @@ func Update() *cli.Command {
 			switch {
 			case bearerToken != "":
 				context.Auth = &command.AuthContext{BearerToken: &bearerToken}
-
-			case legacyAPIKey != "":
-				context.Auth = &command.AuthContext{LegacyApiKey: &legacyAPIKey}
 
 			case unauthenticated:
 				context.Auth = nil
