@@ -5,12 +5,11 @@ import (
 )
 
 type Context struct {
-	URL    string       `json:"lattice"`
+	URL    string       `json:"url"`
 	System v1.SystemID  `json:"system,omitempty"`
 	Auth   *AuthContext `json:"auth"`
 }
 
 type AuthContext struct {
-	LegacyApiKey *string `json:"legacyApiKey"`
-	BearerToken  *string `json:"bearerToken"`
+	BearerToken *string `json:"bearerToken"`
 }

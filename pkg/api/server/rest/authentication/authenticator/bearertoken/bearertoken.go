@@ -1,7 +1,6 @@
 package bearertoken
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -34,11 +33,10 @@ func (authenticator *Authenticator) AuthenticateRequest(c *gin.Context) (user.Us
 	token := parts[1]
 
 	if len(token) == 0 {
-		return nil, false, fmt.Errorf("")
+		return nil, false, nil
 	}
 
 	u, ok, err := authenticator.token.AuthenticateToken(token)
-
 	if err != nil {
 		return nil, false, err
 	}

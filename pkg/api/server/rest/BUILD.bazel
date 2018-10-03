@@ -12,7 +12,6 @@ go_library(
         "//pkg/api/server/authentication/authenticator:go_default_library",
         "//pkg/api/server/backend:go_default_library",
         "//pkg/api/server/rest/authentication/authenticator:go_default_library",
-        "//pkg/api/server/rest/authentication/authenticator/apikey:go_default_library",
         "//pkg/api/server/rest/authentication/authenticator/bearertoken:go_default_library",
         "//pkg/api/server/rest/v1:go_default_library",
         "//pkg/definition/resolver:go_default_library",
