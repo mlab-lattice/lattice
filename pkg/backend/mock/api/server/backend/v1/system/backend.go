@@ -27,7 +27,7 @@ func NewBackend(componentResolver resolver.Interface) *Backend {
 	}
 }
 
-func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
+func (b *Backend) Define(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
 	b.registry.Lock()
 	defer b.registry.Unlock()
 

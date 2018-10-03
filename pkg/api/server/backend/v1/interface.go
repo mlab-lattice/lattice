@@ -13,7 +13,7 @@ type Interface interface {
 }
 
 type SystemBackend interface {
-	Create(id v1.SystemID, url string) (*v1.System, error)
+	Define(id v1.SystemID, url string) (*v1.System, error)
 	List() ([]v1.System, error)
 	Get(v1.SystemID) (*v1.System, error)
 	Delete(v1.SystemID) error

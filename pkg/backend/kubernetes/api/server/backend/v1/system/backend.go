@@ -29,7 +29,7 @@ type Backend struct {
 	latticeClient   latticeclientset.Interface
 }
 
-func (b *Backend) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {
+func (b *Backend) Define(id v1.SystemID, definitionURL string) (*v1.System, error) {
 	system := &latticev1.System{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(id),

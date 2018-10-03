@@ -111,7 +111,7 @@ func happyPathTest(t *testing.T) {
 func createSystem(t *testing.T) {
 	// test create system
 	fmt.Println("Test create system")
-	system, err := latticeClient.Systems().Create(mockSystemID, mockSystemDefURL)
+	system, err := latticeClient.Systems().Define(mockSystemID, mockSystemDefURL)
 	checkErr(err, t)
 
 	if system.ID != mockSystemID {
@@ -550,7 +550,7 @@ func testInvalidIDs(t *testing.T) {
 
 	// test other stuff
 	testID := v1.SystemID("test")
-	_, err := latticeClient.Systems().Create(testID, mockSystemDefURL)
+	_, err := latticeClient.Systems().Define(testID, mockSystemDefURL)
 	checkErr(err, t)
 	waitFor(func() bool {
 		s, err := latticeClient.Systems().Get(testID)
@@ -604,7 +604,7 @@ func testInvalidDefinition(t *testing.T) {
 	fmt.Println("Test invalid definition URL")
 
 	testID := v1.SystemID("test")
-	_, err := latticeClient.Systems().Create("test", "xxxxxxx")
+	_, err := latticeClient.Systems().Define("test", "xxxxxxx")
 	checkErr(err, t)
 
 	waitFor(func() bool {

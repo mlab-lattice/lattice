@@ -48,7 +48,7 @@ func Systems() *cli.Command {
 			return PrintSystems(ctx.Client, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
-			"create":   systems.Create(),
+			"define":   systems.Define(),
 			"delete":   systems.Delete(),
 			"status":   systems.Status(),
 			"versions": systems.Versions(),

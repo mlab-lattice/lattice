@@ -26,7 +26,7 @@ func newSystemClient(c rest.Client, apiServerURL string) *SystemClient {
 	}
 }
 
-func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {
+func (c *SystemClient) Define(id v1.SystemID, definitionURL string) (*v1.System, error) {
 	request := v1rest.CreateSystemRequest{
 		ID:            id,
 		DefinitionURL: definitionURL,

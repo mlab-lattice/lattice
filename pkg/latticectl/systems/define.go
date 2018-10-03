@@ -14,8 +14,8 @@ import (
 	"github.com/briandowns/spinner"
 )
 
-// Create returns a *cli.Command to create a system.
-func Create() *cli.Command {
+// Define returns a *cli.Command to create a system.
+func Define() *cli.Command {
 	var (
 		definition string
 		name       string
@@ -35,22 +35,22 @@ func Create() *cli.Command {
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
-			return CreateSystem(ctx.Client, v1.SystemID(name), definition, watch)
+			return DefineSystem(ctx.Client, v1.SystemID(name), definition, watch)
 		},
 	}
 
 	return cmd.Command()
 }
 
-// CreateSystem creates the system with the specified options.
-func CreateSystem(client client.Interface, id v1.SystemID, definition string, watch bool) error {
-	_, err := client.V1().Systems().Create(id, definition)
+// DefineSystem defines a new system with the specified options.
+func DefineSystem(client client.Interface, id v1.SystemID, definition string, watch bool) error {
+	_, err := client.V1().Systems().Define(id, definition)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		return WatchSystemCreate(client, id)
+		return WatchSystemDefine(client, id)
 	}
 
 	fmt.Printf(
@@ -65,8 +65,8 @@ to watch progress, run:
 	return nil
 }
 
-// WatchSystemCreate spins until the system has successfully been created.
-func WatchSystemCreate(client client.Interface, id v1.SystemID) error {
+// WatchSystemDefine spins until the system has successfully been created.
+func WatchSystemDefine(client client.Interface, id v1.SystemID) error {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Start()
 	s.Suffix = " system is creating"

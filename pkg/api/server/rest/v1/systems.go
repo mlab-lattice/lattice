@@ -56,7 +56,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 		return
 	}
 
-	system, err := api.backend.Systems().Create(req.ID, req.DefinitionURL)
+	system, err := api.backend.Systems().Define(req.ID, req.DefinitionURL)
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
