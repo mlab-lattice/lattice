@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
+// Versions returns a *cli.Command to retrieve the versions of a system.
 func Versions() *cli.Command {
 	var (
 		output string
@@ -23,14 +24,15 @@ func Versions() *cli.Command {
 		},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
-			return ListVersions(ctx.Client, ctx.System, os.Stdout, format)
+			return PrintVersions(ctx.Client, ctx.System, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func ListVersions(client client.Interface, id v1.SystemID, w io.Writer, format printer.Format) error {
+// PrintVersions prints out the system's versions to the supplied writer.
+func PrintVersions(client client.Interface, id v1.SystemID, w io.Writer, format printer.Format) error {
 	versions, err := client.V1().Systems().Versions(id)
 	if err != nil {
 		return err

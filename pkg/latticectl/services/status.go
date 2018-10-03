@@ -15,13 +15,14 @@ import (
 	"strconv"
 )
 
+// Status returns a *cli.Command to retrieve the status of a service.
 func Status() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := Command{
+	cmd := ServiceCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -37,18 +38,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchService(ctx.Client, ctx.System, ctx.Service, os.Stdout, format)
-				return nil
+				return WatchServiceStatus(ctx.Client, ctx.System, ctx.Service, format)
 			}
 
-			return PrintService(ctx.Client, ctx.System, ctx.Service, os.Stdout, format)
+			return PrintServiceStatus(ctx.Client, ctx.System, ctx.Service, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintService(client client.Interface, system v1.SystemID, id v1.ServiceID, w io.Writer, f printer.Format) error {
+// PrintServiceStatus prints the specified service's status to the supplied writer.
+func PrintServiceStatus(client client.Interface, system v1.SystemID, id v1.ServiceID, w io.Writer, f printer.Format) error {
 	service, err := client.V1().Systems().Services(system).Get(id)
 	if err != nil {
 		return err
@@ -71,11 +72,14 @@ func PrintService(client client.Interface, system v1.SystemID, id v1.ServiceID, 
 	return nil
 }
 
-func WatchService(client client.Interface, system v1.SystemID, id v1.ServiceID, w io.Writer, f printer.Format) error {
+// WatchServiceStatus watches the specified service, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchServiceStatus(client client.Interface, system v1.SystemID, id v1.ServiceID, f printer.Format) error {
 	var handle func(*v1.Service)
 	switch f {
 	case printer.FormatTable:
-		dw := serviceWriter(w)
+		dw := serviceWriter(os.Stdout)
 
 		handle = func(service *v1.Service) {
 			s := serviceString(service)
@@ -83,7 +87,7 @@ func WatchService(client client.Interface, system v1.SystemID, id v1.ServiceID, 
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(service *v1.Service) {
 			j.Print(service)
 		}

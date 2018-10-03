@@ -11,7 +11,15 @@ const (
 	teardownFlagName = "teardown"
 )
 
-type Command struct {
+// TeardownCommandContext contains the information available to any TeardownCommand.
+type TeardownCommandContext struct {
+	*command.SystemCommandContext
+	Teardown v1.TeardownID
+}
+
+// TeardownCommand is a Command that acts on a specific teardown in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a teardown was specified.
+type TeardownCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -22,12 +30,8 @@ type Command struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type TeardownCommandContext struct {
-	*command.SystemCommandContext
-	Teardown v1.TeardownID
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the TeardownCommand.
+func (c *TeardownCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

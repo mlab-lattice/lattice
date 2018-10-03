@@ -12,7 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
-// Logs returns a Command to retrieve the logs of a build.
+// Logs returns a *cli.Command to retrieve the logs of a build.
 func Logs() *cli.Command {
 	var (
 		follow     bool
@@ -24,7 +24,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := Command{
+	cmd := BuildCommand{
 		Flags: map[string]cli.Flag{
 			"follow": &flags.Bool{Target: &follow},
 			"path": &flags.Path{
@@ -62,7 +62,7 @@ func Logs() *cli.Command {
 	return cmd.Command()
 }
 
-// BuildLogs prints the logs for the specified build the supplied writer.
+// BuildLogs prints the logs for the specified build to the supplied writer.
 func BuildLogs(
 	client client.Interface,
 	system v1.SystemID,

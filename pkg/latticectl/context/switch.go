@@ -10,6 +10,7 @@ const (
 	flagNone = "none"
 )
 
+// Switch returns a *cli.Command to switch the current context.
 func Switch() *cli.Command {
 	var (
 		configPath string

@@ -2,8 +2,6 @@ package latticectl
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -25,6 +23,7 @@ var (
 	buildTypeFlags = []string{buildPathFlag, buildVersionFlag}
 )
 
+// Build returns a *cli.Command to build a system.
 func Build() *cli.Command {
 	var (
 		output  string
@@ -53,10 +52,10 @@ func Build() *cli.Command {
 			format := printer.Format(output)
 			switch {
 			case flags[buildPathFlag].Set():
-				return BuildPath(ctx.Client, ctx.System, path, os.Stdout, format, watch)
+				return BuildPath(ctx.Client, ctx.System, path, format, watch)
 
 			case flags[buildVersionFlag].Set():
-				return BuildVersion(ctx.Client, ctx.System, v1.Version(version), os.Stdout, format, watch)
+				return BuildVersion(ctx.Client, ctx.System, v1.Version(version), format, watch)
 
 			default:
 				// this shouldn't happen due to the mutually exclusive and required flag sets
@@ -68,11 +67,11 @@ func Build() *cli.Command {
 	return cmd.Command()
 }
 
+// BuildPath builds a system with the supplied path.
 func BuildPath(
 	client client.Interface,
 	system v1.SystemID,
 	path tree.Path,
-	w io.Writer,
 	f printer.Format,
 	watch bool,
 ) error {
@@ -81,14 +80,14 @@ func BuildPath(
 		return err
 	}
 
-	return displayBuild(client, system, build, fmt.Sprintf("path %v", path.String()), w, f, watch)
+	return displayBuild(client, system, build, fmt.Sprintf("path %v", path.String()), f, watch)
 }
 
+// BuildPath builds a system with the supplied version.
 func BuildVersion(
 	client client.Interface,
 	system v1.SystemID,
 	version v1.Version,
-	w io.Writer,
 	f printer.Format,
 	watch bool,
 ) error {
@@ -97,7 +96,7 @@ func BuildVersion(
 		return err
 	}
 
-	return displayBuild(client, system, build, fmt.Sprintf("version %v", version), w, f, watch)
+	return displayBuild(client, system, build, fmt.Sprintf("version %v", version), f, watch)
 }
 
 func displayBuild(
@@ -105,16 +104,14 @@ func displayBuild(
 	system v1.SystemID,
 	build *v1.Build,
 	description string,
-	w io.Writer,
 	f printer.Format,
 	watch bool,
 ) error {
 	if watch {
-		return builds.WatchBuild(client, system, build.ID, w, f)
+		return builds.WatchBuildStatus(client, system, build.ID, f)
 	}
 
-	fmt.Fprintf(
-		w,
+	fmt.Printf(
 		`
 building %s for system %s. build ID: %s
 

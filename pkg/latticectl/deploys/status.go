@@ -14,13 +14,14 @@ import (
 	"time"
 )
 
+// Status returns a *cli.Command to retrieve the status of a deploy.
 func Status() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := Command{
+	cmd := DeployCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -36,18 +37,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchDeploy(ctx.Client, ctx.System, ctx.Deploy, os.Stdout, format)
-				return nil
+				return WatchDeployStatus(ctx.Client, ctx.System, ctx.Deploy, os.Stdout, format)
 			}
 
-			return PrintDeploy(ctx.Client, ctx.System, ctx.Deploy, os.Stdout, format)
+			return PrintDeployStatus(ctx.Client, ctx.System, ctx.Deploy, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w io.Writer, f printer.Format) error {
+// PrintDeployStatus prints the specified deploy's status to the supplied writer.
+func PrintDeployStatus(client client.Interface, system v1.SystemID, id v1.DeployID, w io.Writer, f printer.Format) error {
 	deploy, err := client.V1().Systems().Deploys(system).Get(id)
 	if err != nil {
 		return err
@@ -70,7 +71,10 @@ func PrintDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 	return nil
 }
 
-func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w io.Writer, f printer.Format) error {
+// WatchDeployStatus watches the specified build, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchDeployStatus(client client.Interface, system v1.SystemID, id v1.DeployID, w io.Writer, f printer.Format) error {
 	var handle func(*v1.Deploy) bool
 	switch f {
 	case printer.FormatTable:

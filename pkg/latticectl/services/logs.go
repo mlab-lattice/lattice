@@ -15,6 +15,7 @@ const (
 	instanceFlag = "instance"
 )
 
+// Logs returns a *cli.Command to retrieve the logs of a service.
 func Logs() *cli.Command {
 	var (
 		follow     bool
@@ -26,7 +27,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := Command{
+	cmd := ServiceCommand{
 		Flags: map[string]cli.Flag{
 			"follow":                &flags.Bool{Target: &follow},
 			instanceFlag:            &flags.String{Target: &instance},
@@ -66,6 +67,7 @@ func Logs() *cli.Command {
 	return cmd.Command()
 }
 
+// ServiceLogs prints the logs for the specified service to the supplied writer.
 func ServiceLogs(
 	client client.Interface,
 	system v1.SystemID,

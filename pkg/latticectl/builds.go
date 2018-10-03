@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Builds returns a *cli.Command to list a system's builds with subcommands to interact
+// with individual builds.
 func Builds() *cli.Command {
 	var (
 		output string
@@ -40,11 +42,10 @@ func Builds() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchBuilds(ctx.Client, ctx.System, format, os.Stdout)
-				return nil
+				return WatchBuilds(ctx.Client, ctx.System, format)
 			}
 
-			return PrintBuilds(ctx.Client, ctx.System, format, os.Stdout)
+			return PrintBuilds(ctx.Client, ctx.System, os.Stdout, format)
 		},
 		Subcommands: map[string]*cli.Command{
 			"logs":   builds.Logs(),
@@ -55,8 +56,8 @@ func Builds() *cli.Command {
 	return cmd.Command()
 }
 
-// PrintBuilds writes the current Systems to the supplied io.Writer in the given printer.Format.
-func PrintBuilds(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) error {
+// PrintBuilds prints the system's builds to the supplied writer.
+func PrintBuilds(client client.Interface, system v1.SystemID, w io.Writer, format printer.Format) error {
 	builds, err := client.V1().Systems().Builds(system).List()
 	if err != nil {
 		return err
@@ -80,10 +81,10 @@ func PrintBuilds(client client.Interface, system v1.SystemID, format printer.For
 	return nil
 }
 
-// WatchBuilds polls the API for the current Systems, and writes out the Systems to the
-// the supplied io.Writer in the given printer.Format, unless the printer.Format is
-// printer.FormatTable, in which case it always writes to the terminal.
-func WatchBuilds(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) {
+// WatchBuilds watches the system's builds, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchBuilds(client client.Interface, system v1.SystemID, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
 	builds := make(chan []v1.Build)
 
@@ -103,25 +104,26 @@ func WatchBuilds(client client.Interface, system v1.SystemID, format printer.For
 	var handle func([]v1.Build)
 	switch format {
 	case printer.FormatTable:
-		t := buildsTable(w)
+		t := buildsTable(os.Stdout)
 		handle = func(builds []v1.Build) {
 			r := buildsTableRows(builds)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(builds []v1.Build) {
 			j.Print(builds)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", format))
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
 	for d := range builds {
 		handle(d)
 	}
+	return nil
 }
 
 func buildsTable(w io.Writer) *printer.Table {

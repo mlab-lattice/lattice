@@ -12,8 +12,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 )
 
+// Unset returns a *cli.Command to unset the value of a secret.
 func Unset() *cli.Command {
-	cmd := Command{
+	cmd := SecretCommand{
 		Run: func(ctx *SecretCommandContext, args []string, flags cli.Flags) error {
 			return UnsetSecret(ctx.Client, ctx.System, ctx.Secret, os.Stdout)
 		},
@@ -22,6 +23,7 @@ func Unset() *cli.Command {
 	return cmd.Command()
 }
 
+// UnsetSecret sets the value of the secret and prints a success message to the supplied writer if it succeeded.
 func UnsetSecret(
 	client client.Interface,
 	system v1.SystemID,

@@ -11,7 +11,15 @@ const (
 	secretFlagName = "secret"
 )
 
-type Command struct {
+// SecretCommandContext contains the information available to any SecretCommand.
+type SecretCommandContext struct {
+	*command.SystemCommandContext
+	Secret tree.PathSubcomponent
+}
+
+// SecretCommand is a SecretCommand that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a secret was specified.
+type SecretCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -22,12 +30,8 @@ type Command struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type SecretCommandContext struct {
-	*command.SystemCommandContext
-	Secret tree.PathSubcomponent
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the SecretCommand.
+func (c *SecretCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

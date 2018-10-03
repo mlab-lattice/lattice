@@ -21,13 +21,14 @@ const (
 
 var setContentFlags = []string{setFileFlag, setValueFlag}
 
+// Set returns a *cli.Command to set the value of a secret.
 func Set() *cli.Command {
 	var (
 		file  string
 		value string
 	)
 
-	cmd := Command{
+	cmd := SecretCommand{
 		Flags: map[string]cli.Flag{
 			setFileFlag:  &flags.String{Target: &file},
 			setValueFlag: &flags.String{Target: &value},
@@ -57,6 +58,7 @@ func Set() *cli.Command {
 	return cmd.Command()
 }
 
+// SetSecret sets the value of the secret and prints a success message to the supplied writer if it succeeded.
 func SetSecret(
 	client client.Interface,
 	system v1.SystemID,

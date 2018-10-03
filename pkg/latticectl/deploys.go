@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Deploys returns a *cli.Command to list a system's deploys with subcommands to interact
+// with individual deploys.
 func Deploys() *cli.Command {
 	var (
 		output string
@@ -40,8 +42,7 @@ func Deploys() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchDeploys(ctx.Client, ctx.System, format, os.Stdout)
-				return nil
+				return WatchDeploys(ctx.Client, ctx.System, format)
 			}
 
 			return PrintDeploys(ctx.Client, ctx.System, format, os.Stdout)
@@ -54,7 +55,7 @@ func Deploys() *cli.Command {
 	return cmd.Command()
 }
 
-// PrintDeploys writes the current Systems to the supplied io.Writer in the given printer.Format.
+// PrintBuilds prints the system's deploys to the supplied writer.
 func PrintDeploys(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) error {
 	deploys, err := client.V1().Systems().Deploys(system).List()
 	if err != nil {
@@ -79,10 +80,10 @@ func PrintDeploys(client client.Interface, system v1.SystemID, format printer.Fo
 	return nil
 }
 
-// WatchDeploys polls the API for the current Systems, and writes out the Systems to the
-// the supplied io.Writer in the given printer.Format, unless the printer.Format is
-// printer.FormatTable, in which case it always writes to the terminal.
-func WatchDeploys(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) {
+// WatchDeploys watches the system's deploys, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchDeploys(client client.Interface, system v1.SystemID, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
 	deploys := make(chan []v1.Deploy)
 
@@ -102,25 +103,27 @@ func WatchDeploys(client client.Interface, system v1.SystemID, format printer.Fo
 	var handle func([]v1.Deploy)
 	switch format {
 	case printer.FormatTable:
-		t := deploysTable(w)
+		t := deploysTable(os.Stdout)
 		handle = func(deploys []v1.Deploy) {
 			r := deploysTableRows(deploys)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(deploys []v1.Deploy) {
 			j.Print(deploys)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", format))
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
 	for d := range deploys {
 		handle(d)
 	}
+
+	return nil
 }
 
 func deploysTable(w io.Writer) *printer.Table {

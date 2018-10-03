@@ -26,6 +26,7 @@ var (
 	deployTypeFlags = []string{deployBuildFlag, deployPathFlag, deployVersionFlag}
 )
 
+// Deploy returns a *cli.Command to deploy a system.
 func Deploy() *cli.Command {
 	var (
 		build   string
@@ -74,6 +75,7 @@ func Deploy() *cli.Command {
 	return cmd.Command()
 }
 
+// DeployBuild deploys a system with the supplied build.
 func DeployBuild(
 	client client.Interface,
 	system v1.SystemID,
@@ -90,6 +92,7 @@ func DeployBuild(
 	return displayDeploy(client, system, deploy, fmt.Sprintf("build %v", build), w, f, watch)
 }
 
+// DeployPath deploys a system with the supplied path.
 func DeployPath(
 	client client.Interface,
 	system v1.SystemID,
@@ -106,6 +109,7 @@ func DeployPath(
 	return displayDeploy(client, system, deploy, fmt.Sprintf("path %v", path.String()), w, f, watch)
 }
 
+// DeployVersion deploys a system with the supplied version.
 func DeployVersion(
 	client client.Interface,
 	system v1.SystemID,
@@ -132,7 +136,7 @@ func displayDeploy(
 	watch bool,
 ) error {
 	if watch {
-		return deploys.WatchDeploy(client, system, deploy.ID, w, f)
+		return deploys.WatchDeployStatus(client, system, deploy.ID, w, f)
 	}
 
 	fmt.Fprintf(

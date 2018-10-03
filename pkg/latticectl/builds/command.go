@@ -11,7 +11,15 @@ const (
 	buildFlagName = "build"
 )
 
-type Command struct {
+// BuildCommandContext contains the information available to any BuildCommand.
+type BuildCommandContext struct {
+	*command.SystemCommandContext
+	Build v1.BuildID
+}
+
+// BuildCommand is a Command that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a build was specified.
+type BuildCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -22,12 +30,8 @@ type Command struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type BuildCommandContext struct {
-	*command.SystemCommandContext
-	Build v1.BuildID
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the BuildCommand.
+func (c *BuildCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

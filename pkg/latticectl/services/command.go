@@ -15,7 +15,17 @@ const (
 
 var serviceIdentifierFlags = []string{serviceFlag, servicePathFlag}
 
-type Command struct {
+// ServiceCommandContext contains the information available to any ServiceCommand.
+type ServiceCommandContext struct {
+	*command.SystemCommandContext
+	Service v1.ServiceID
+
+	service *v1.Service
+}
+
+// ServiceCommand is a Command that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a service was specified.
+type ServiceCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -28,14 +38,8 @@ type Command struct {
 	ctx *ServiceCommandContext
 }
 
-type ServiceCommandContext struct {
-	*command.SystemCommandContext
-	Service v1.ServiceID
-
-	service *v1.Service
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the ServiceCommand.
+func (c *ServiceCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
@@ -10,16 +12,16 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
-	"os"
 )
 
+// Status returns a *cli.Command to retrieve the status of a job.
 func Status() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := Command{
+	cmd := JobCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -35,18 +37,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchJob(ctx.Client, ctx.System, ctx.Job, format)
-				return nil
+				return WatchJobStatus(ctx.Client, ctx.System, ctx.Job, format)
 			}
 
-			return PrintJob(ctx.Client, ctx.System, ctx.Job, format)
+			return PrintJobStatus(ctx.Client, ctx.System, ctx.Job, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, f printer.Format) error {
+// PrintJobStatus prints the specified job's status to the supplied writer.
+func PrintJobStatus(client client.Interface, system v1.SystemID, id v1.JobID, w io.Writer, f printer.Format) error {
 	job, err := client.V1().Systems().Jobs(system).Get(id)
 	if err != nil {
 		return err
@@ -54,7 +56,7 @@ func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, f printe
 
 	switch f {
 	case printer.FormatTable:
-		dw := jobWriter()
+		dw := jobWriter(w)
 		s := jobString(job)
 		dw.Print(s)
 
@@ -69,11 +71,14 @@ func PrintJob(client client.Interface, system v1.SystemID, id v1.JobID, f printe
 	return nil
 }
 
-func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, f printer.Format) error {
+// WatchJobStatus watches the specified job, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchJobStatus(client client.Interface, system v1.SystemID, id v1.JobID, f printer.Format) error {
 	var handle func(*v1.Job) bool
 	switch f {
 	case printer.FormatTable:
-		dw := jobWriter()
+		dw := jobWriter(os.Stdout)
 
 		handle = func(job *v1.Job) bool {
 			s := jobString(job)
@@ -118,8 +123,8 @@ func WatchJob(client client.Interface, system v1.SystemID, id v1.JobID, f printe
 	}
 }
 
-func jobWriter() *printer.Custom {
-	return printer.NewCustom(os.Stdout)
+func jobWriter(w io.Writer) *printer.Custom {
+	return printer.NewCustom(w)
 }
 
 func jobString(job *v1.Job) string {

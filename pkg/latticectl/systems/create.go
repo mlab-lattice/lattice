@@ -2,28 +2,23 @@ package systems
 
 import (
 	"fmt"
-	"io"
-	"os"
-	//"sort"
-	//"strings"
-	//"time"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
-	//"k8s.io/apimachinery/pkg/util/wait"
-	//"github.com/briandowns/spinner"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+
+	"github.com/briandowns/spinner"
 )
 
+// Create returns a *cli.Command to create a system.
 func Create() *cli.Command {
 	var (
 		definition string
 		name       string
-		output     string
 		watch      bool
 	)
 
@@ -37,38 +32,29 @@ func Create() *cli.Command {
 				Required: true,
 				Target:   &name,
 			},
-			command.OutputFlagName: command.OutputFlag(
-				&output,
-				[]printer.Format{
-					printer.FormatJSON,
-					printer.FormatTable,
-				},
-				printer.FormatTable,
-			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
-			format := printer.Format(output)
-			return CreateSystem(ctx.Client, v1.SystemID(name), definition, os.Stdout, format, watch)
+			return CreateSystem(ctx.Client, v1.SystemID(name), definition, watch)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func CreateSystem(client client.Interface, id v1.SystemID, definition string, w io.Writer, f printer.Format, watch bool) error {
+// CreateSystem creates the system with the specified options.
+func CreateSystem(client client.Interface, id v1.SystemID, definition string, watch bool) error {
 	_, err := client.V1().Systems().Create(id, definition)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		WatchSystem(client, id, w, f)
-		return nil
+		return WatchSystemCreate(client, id)
 	}
 
-	fmt.Fprintf(
-		w, `system %s initializing
+	fmt.Printf(
+		`system %s initializing
 
 to watch progress, run:
   latticectl systems status --system %s -w
@@ -77,4 +63,25 @@ to watch progress, run:
 		id,
 	)
 	return nil
+}
+
+// WatchSystemCreate spins until the system has successfully been created.
+func WatchSystemCreate(client client.Interface, id v1.SystemID) error {
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Start()
+	s.Suffix = " system is creating"
+
+	for {
+		system, err := client.V1().Systems().Get(id)
+		if err != nil {
+			return err
+		}
+
+		if system.Status.State == v1.SystemStateStable {
+			s.Stop()
+			fmt.Printf(color.BoldHiSuccessString("✓ system has been created\n"))
+		}
+
+		time.Sleep(5 * time.Second)
+	}
 }

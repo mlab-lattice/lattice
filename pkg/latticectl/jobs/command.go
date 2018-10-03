@@ -11,7 +11,15 @@ const (
 	jobFlagName = "job"
 )
 
-type Command struct {
+// JobCommandContext contains the information available to any JobCommand.
+type JobCommandContext struct {
+	*command.SystemCommandContext
+	Job v1.JobID
+}
+
+// JobCommand is a Command that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a job was specified.
+type JobCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -22,12 +30,8 @@ type Command struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type JobCommandContext struct {
-	*command.SystemCommandContext
-	Job v1.JobID
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the JobCommand.
+func (c *JobCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

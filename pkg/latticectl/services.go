@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Services returns a *cli.Command to list a system's services with subcommands to interact
+// with individual services.
 func Services() *cli.Command {
 	var (
 		output string
@@ -40,11 +42,10 @@ func Services() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchServices(ctx.Client, ctx.System, os.Stdout, format)
-				return nil
+				return WatchServices(ctx.Client, ctx.System, format)
 			}
 
-			return PrintServices(ctx.Client, ctx.System, os.Stdout, format)
+			return PrintServices(ctx.Client, ctx.System, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
 			"logs":   services.Logs(),
@@ -55,7 +56,8 @@ func Services() *cli.Command {
 	return cmd.Command()
 }
 
-func PrintServices(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+// PrintServices prints the system's jobs to the supplied writer.
+func PrintServices(client client.Interface, id v1.SystemID, f printer.Format, w io.Writer) error {
 	services, err := client.V1().Systems().Services(id).List()
 	if err != nil {
 		return err
@@ -84,7 +86,10 @@ func PrintServices(client client.Interface, id v1.SystemID, w io.Writer, f print
 	return nil
 }
 
-func WatchServices(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) {
+// WatchServices watches the system's services, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchServices(client client.Interface, id v1.SystemID, f printer.Format) error {
 	services := make(chan []v1.Service)
 
 	// Poll the API for the builds and send it to the channel
@@ -106,25 +111,27 @@ func WatchServices(client client.Interface, id v1.SystemID, w io.Writer, f print
 	var handle func(services []v1.Service)
 	switch f {
 	case printer.FormatTable:
-		t := servicesTable(w)
+		t := servicesTable(os.Stdout)
 		handle = func(services []v1.Service) {
 			r := servicesTableRows(services)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(services []v1.Service) {
 			j.Print(services)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", f))
+		return fmt.Errorf("unexpected format %v", f)
 	}
 
 	for s := range services {
 		handle(s)
 	}
+
+	return nil
 }
 
 func servicesTable(w io.Writer) *printer.Table {

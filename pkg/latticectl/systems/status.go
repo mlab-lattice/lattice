@@ -14,6 +14,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
+// Status returns a *cli.Command to retrieve the status of a system.
 func Status() *cli.Command {
 	var (
 		output string
@@ -36,18 +37,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchSystem(ctx.Client, ctx.System, os.Stdout, format)
-				return nil
+				return WatchSystemStatus(ctx.Client, ctx.System, format)
 			}
 
-			return PrintSystem(ctx.Client, ctx.System, os.Stdout, format)
+			return PrintSystemStatus(ctx.Client, ctx.System, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+// PrintSystemStatus prints the specified system's status to the supplied writer.
+func PrintSystemStatus(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
 	system, err := client.V1().Systems().Get(id)
 	if err != nil {
 		return err
@@ -70,11 +71,14 @@ func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer
 	return nil
 }
 
-func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+// WatchSystemStatus watches the specified status, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchSystemStatus(client client.Interface, id v1.SystemID, f printer.Format) error {
 	var handle func(*v1.System)
 	switch f {
 	case printer.FormatTable:
-		dw := systemWriter(w)
+		dw := systemWriter(os.Stdout)
 
 		handle = func(system *v1.System) {
 			s := systemString(system)
@@ -82,7 +86,7 @@ func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(system *v1.System) {
 			j.Print(system)
 		}

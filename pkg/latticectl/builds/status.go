@@ -16,14 +16,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
-// Status returns a Command to retrieve the status of a build.
+// Status returns a *cli.Command to retrieve the status of a build.
 func Status() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := Command{
+	cmd := BuildCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -39,8 +39,7 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchBuild(ctx.Client, ctx.System, ctx.Build, format)
-				return nil
+				return WatchBuildStatus(ctx.Client, ctx.System, ctx.Build, format)
 			}
 
 			return PrintBuildStatus(ctx.Client, ctx.System, ctx.Build, os.Stdout, format)
@@ -74,10 +73,10 @@ func PrintBuildStatus(client client.Interface, system v1.SystemID, id v1.BuildID
 	return nil
 }
 
-// WatchBuild watches the specified build, updating output based on changes.
+// WatchBuildStatus watches the specified build, updating output based on changes.
 // When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
-// so it cannot accept an io.Writer.
-func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, f printer.Format) error {
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchBuildStatus(client client.Interface, system v1.SystemID, id v1.BuildID, f printer.Format) error {
 	var handle func(*v1.Build) bool
 	switch f {
 	case printer.FormatTable:

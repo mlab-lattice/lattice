@@ -14,13 +14,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
+// Status returns a *cli.Command to retrieve the status of a teardown.
 func Status() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := Command{
+	cmd := TeardownCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -36,18 +37,18 @@ func Status() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchTeardown(ctx.Client, ctx.System, ctx.Teardown, os.Stdout, format)
-				return nil
+				return WatchTeardownStatus(ctx.Client, ctx.System, ctx.Teardown, format)
 			}
 
-			return PrintTeardown(ctx.Client, ctx.System, ctx.Teardown, os.Stdout, format)
+			return PrintTeardownStatus(ctx.Client, ctx.System, ctx.Teardown, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func PrintTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID, w io.Writer, f printer.Format) error {
+// PrintTeardownStatus prints the specified build's status to the supplied writer.
+func PrintTeardownStatus(client client.Interface, system v1.SystemID, id v1.TeardownID, w io.Writer, f printer.Format) error {
 	teardown, err := client.V1().Systems().Teardowns(system).Get(id)
 	if err != nil {
 		return err
@@ -70,11 +71,14 @@ func PrintTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 	return nil
 }
 
-func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID, w io.Writer, f printer.Format) error {
+// WatchTeardownStatus watches the specified teardown, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchTeardownStatus(client client.Interface, system v1.SystemID, id v1.TeardownID, f printer.Format) error {
 	var handle func(*v1.Teardown) bool
 	switch f {
 	case printer.FormatTable:
-		dw := teardownWriter(w)
+		dw := teardownWriter(os.Stdout)
 
 		handle = func(teardown *v1.Teardown) bool {
 			s := teardownString(teardown)
@@ -82,11 +86,11 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 
 			switch teardown.Status.State {
 			case v1.TeardownStateFailed:
-				fmt.Fprint(w, color.BoldHiFailureString("✘ teardown failed\n"))
+				fmt.Print(color.BoldHiFailureString("✘ teardown failed\n"))
 				return true
 
 			case v1.TeardownStateSucceeded:
-				fmt.Fprint(w, color.BoldHiSuccessString("✓ teardown succeeded\n"))
+				fmt.Print(color.BoldHiSuccessString("✓ teardown succeeded\n"))
 				return true
 			}
 
@@ -94,7 +98,7 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(teardown *v1.Teardown) bool {
 			j.Print(teardown)
 			return false

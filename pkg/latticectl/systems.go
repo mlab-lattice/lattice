@@ -18,6 +18,8 @@ import (
 	"sort"
 )
 
+// Services returns a *cli.Command to list a lattice's systems with subcommands to interact
+// with individual systems.
 func Systems() *cli.Command {
 	var (
 		output string
@@ -40,8 +42,7 @@ func Systems() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchSystems(ctx.Client, format, os.Stdout)
-				return nil
+				return WatchSystems(ctx.Client, format)
 			}
 
 			return PrintSystems(ctx.Client, format, os.Stdout)
@@ -57,7 +58,7 @@ func Systems() *cli.Command {
 	return cmd.Command()
 }
 
-// PrintSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
+// PrintServices prints the lattice's systems to the supplied writer.
 func PrintSystems(client client.Interface, format printer.Format, w io.Writer) error {
 	systems, err := client.V1().Systems().List()
 	if err != nil {
@@ -82,10 +83,10 @@ func PrintSystems(client client.Interface, format printer.Format, w io.Writer) e
 	return nil
 }
 
-// WatchSystems polls the API for the current Systems, and writes out the Systems to the
-// the supplied io.Writer in the given printer.Format, unless the printer.Format is
-// printer.FormatTable, in which case it always writes to the terminal.
-func WatchSystems(client client.Interface, format printer.Format, w io.Writer) {
+// WatchSystems watches the lattice's systems, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchSystems(client client.Interface, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
 	systems := make(chan []v1.System)
 
@@ -105,25 +106,27 @@ func WatchSystems(client client.Interface, format printer.Format, w io.Writer) {
 	var handle func([]v1.System)
 	switch format {
 	case printer.FormatTable:
-		t := systemsTable(w)
+		t := systemsTable(os.Stdout)
 		handle = func(systems []v1.System) {
 			r := systemsTableRows(systems)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(systems []v1.System) {
 			j.Print(systems)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", format))
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
 	for s := range systems {
 		handle(s)
 	}
+
+	return nil
 }
 
 func systemsTable(w io.Writer) *printer.Table {

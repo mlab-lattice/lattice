@@ -11,7 +11,15 @@ const (
 	deployFlagName = "deploy"
 )
 
-type Command struct {
+// DeployCommandContext contains the information available to any LatticeCommand.
+type DeployCommandContext struct {
+	*command.SystemCommandContext
+	Deploy v1.DeployID
+}
+
+// DeployCommand is a Command that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a build was specified.
+type DeployCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
@@ -22,12 +30,8 @@ type Command struct {
 	Subcommands            map[string]*cli.Command
 }
 
-type DeployCommandContext struct {
-	*command.SystemCommandContext
-	Deploy v1.DeployID
-}
-
-func (c *Command) Command() *cli.Command {
+// Command returns a *cli.Command for the DeployCommand.
+func (c *DeployCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}

@@ -19,6 +19,7 @@ const (
 	numRetriesFlag = "num-retries"
 )
 
+// Run returns a *cli.Command to run a job.
 func Run() *cli.Command {
 	var (
 		envs       []string
@@ -101,6 +102,7 @@ func Run() *cli.Command {
 	return cmd.Command()
 }
 
+// RunJob runs the supplied job.
 func RunJob(
 	client client.Interface,
 	system v1.SystemID,

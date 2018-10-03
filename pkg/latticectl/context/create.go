@@ -17,6 +17,7 @@ const (
 
 var authFlags = []string{flagBearerToken, flagLegacyAPIKey, flagUnauthenticated}
 
+// Create returns a *cli.Command to create a context.
 func Create() *cli.Command {
 	var (
 		bearerToken     string

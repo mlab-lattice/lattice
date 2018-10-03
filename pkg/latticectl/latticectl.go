@@ -4,7 +4,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
-var Command = cli.RootCommand{
+// Latticectl is the root command for latticectl.
+var Latticectl = cli.RootCommand{
 	Name: "latticectl",
 	Command: &cli.Command{
 		Short: "utility for interacting with lattices",

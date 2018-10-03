@@ -9,7 +9,7 @@ go_library(
         "deploy.go",
         "deploys.go",
         "jobs.go",
-        "root.go",
+        "latticectl.go",
         "secrets.go",
         "services.go",
         "systems.go",

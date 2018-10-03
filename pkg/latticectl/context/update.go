@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
+// Update returns a *cli.Command to update aspects of the supplied context.
 func Update() *cli.Command {
 	var (
 		bearerToken     string

@@ -2,8 +2,6 @@ package latticectl
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -15,6 +13,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
+// Teardown returns a *cli.Command to tear down a system.
 func Teardown() *cli.Command {
 	var (
 		output string
@@ -22,7 +21,7 @@ func Teardown() *cli.Command {
 		watch  bool
 	)
 
-	// teardown explicitly makes the user set the system flag rather than
+	// explicitly make the user set the system flag rather than
 	// using the set context
 	cmd := command.LatticeCommand{
 		Flags: map[string]cli.Flag{
@@ -42,17 +41,17 @@ func Teardown() *cli.Command {
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
-			return TeardownSystem(ctx.Client, v1.SystemID(system), os.Stdout, format, watch)
+			return TeardownSystem(ctx.Client, v1.SystemID(system), format, watch)
 		},
 	}
 
 	return cmd.Command()
 }
 
+// TeardownSystem tears down a system.
 func TeardownSystem(
 	client client.Interface,
 	system v1.SystemID,
-	w io.Writer,
 	f printer.Format,
 	watch bool,
 ) error {
@@ -61,23 +60,21 @@ func TeardownSystem(
 		return err
 	}
 
-	return displayTeardown(client, system, teardown, w, f, watch)
+	return displayTeardown(client, system, teardown, f, watch)
 }
 
 func displayTeardown(
 	client client.Interface,
 	system v1.SystemID,
 	teardown *v1.Teardown,
-	w io.Writer,
 	f printer.Format,
 	watch bool,
 ) error {
 	if watch {
-		return teardowns.WatchTeardown(client, system, teardown.ID, w, f)
+		return teardowns.WatchTeardownStatus(client, system, teardown.ID, f)
 	}
 
-	fmt.Fprintf(
-		w,
+	fmt.Printf(
 		`
 tearing down system %s. teardown ID: %s
 

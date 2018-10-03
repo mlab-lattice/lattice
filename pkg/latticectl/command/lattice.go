@@ -28,7 +28,7 @@ type LatticeCommand struct {
 	Subcommands            map[string]*cli.Command
 }
 
-// Command returns a cli.Command for the LatticeCommand.
+// Command returns a *cli.Command for the LatticeCommand.
 func (c *LatticeCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)

@@ -14,12 +14,13 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
+// Get returns a *cli.Command to retrieve the value of a secret.
 func Get() *cli.Command {
 	var (
 		output string
 	)
 
-	cmd := Command{
+	cmd := SecretCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -39,6 +40,7 @@ func Get() *cli.Command {
 	return cmd.Command()
 }
 
+// GetSecret retrieves the value of the secret and prints it to the supplied writer.
 func GetSecret(
 	client client.Interface,
 	system v1.SystemID,

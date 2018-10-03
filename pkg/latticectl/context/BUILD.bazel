@@ -15,6 +15,7 @@ go_library(
         "//pkg/api/v1:go_default_library",
         "//pkg/latticectl/command:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/color:go_default_library",
         "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/cli/printer:go_default_library",
     ],

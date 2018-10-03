@@ -25,7 +25,7 @@ type SystemCommand struct {
 	Subcommands            map[string]*cli.Command
 }
 
-// Command returns a cli.Command for the SystemCommand.
+// Command returns a *cli.Command for the SystemCommand.
 func (c *SystemCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)

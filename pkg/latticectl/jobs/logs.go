@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
+// Logs returns a *cli.Command to retrieve the logs of a job.
 func Logs() *cli.Command {
 	var (
 		follow     bool
@@ -22,7 +23,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := Command{
+	cmd := JobCommand{
 		Flags: map[string]cli.Flag{
 			"follow":                &flags.Bool{Target: &follow},
 			"previous":              &flags.Bool{Target: &previous},
@@ -55,6 +56,7 @@ func Logs() *cli.Command {
 	return cmd.Command()
 }
 
+// JobLogs prints the logs for the specified job to the supplied writer.
 func JobLogs(
 	client client.Interface,
 	system v1.SystemID,

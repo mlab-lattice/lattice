@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Jobs returns a *cli.Command to list a system's jobs with subcommands to interact
+// with individual jobs.
 func Jobs() *cli.Command {
 	var (
 		output string
@@ -40,11 +42,10 @@ func Jobs() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchJobs(ctx.Client, ctx.System, format, os.Stdout)
-				return nil
+				return WatchJobs(ctx.Client, ctx.System, format)
 			}
 
-			return PrintJobs(ctx.Client, ctx.System, format, os.Stdout)
+			return PrintJobs(ctx.Client, ctx.System, os.Stdout, format)
 		},
 		Subcommands: map[string]*cli.Command{
 			"logs":   jobs.Logs(),
@@ -56,8 +57,8 @@ func Jobs() *cli.Command {
 	return cmd.Command()
 }
 
-// PrintJobs writes the current Systems to the supplied io.Writer in the given printer.Format.
-func PrintJobs(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) error {
+// PrintJobs prints the system's jobs to the supplied writer.
+func PrintJobs(client client.Interface, system v1.SystemID, w io.Writer, format printer.Format) error {
 	jobs, err := client.V1().Systems().Jobs(system).List()
 	if err != nil {
 		return err
@@ -81,10 +82,10 @@ func PrintJobs(client client.Interface, system v1.SystemID, format printer.Forma
 	return nil
 }
 
-// WatchJobs polls the API for the current Systems, and writes out the Systems to the
-// the supplied io.Writer in the given printer.Format, unless the printer.Format is
-// printer.FormatTable, in which case it always writes to the terminal.
-func WatchJobs(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) {
+// WatchJobs watches the system's jobs, updating output based on changes.
+// When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
+// so it always writes to stdout and does not accept an io.Writer.
+func WatchJobs(client client.Interface, system v1.SystemID, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
 	jobs := make(chan []v1.Job)
 
@@ -104,25 +105,27 @@ func WatchJobs(client client.Interface, system v1.SystemID, format printer.Forma
 	var handle func([]v1.Job)
 	switch format {
 	case printer.FormatTable:
-		t := jobsTable(w)
+		t := jobsTable(os.Stdout)
 		handle = func(jobs []v1.Job) {
 			r := jobsTableRows(jobs)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(jobs []v1.Job) {
 			j.Print(jobs)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", format))
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
 	for d := range jobs {
 		handle(d)
 	}
+
+	return nil
 }
 
 func jobsTable(w io.Writer) *printer.Table {

@@ -2,44 +2,29 @@ package systems
 
 import (
 	"fmt"
-	"io"
-	"os"
-	//"sort"
-	//"strings"
-	//"time"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
-	//"k8s.io/apimachinery/pkg/util/wait"
-	//"github.com/briandowns/spinner"
-	"github.com/briandowns/spinner"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
-	"time"
+
+	"github.com/briandowns/spinner"
 )
 
+// Delete returns a *cli.Command to delete a system.
 func Delete() *cli.Command {
 	var (
-		output string
 		system string
 		watch  bool
 	)
 
-	// teardown explicitly makes the user set the system flag rather than
+	// explicitly make the user set the system flag rather than
 	// using the set context
 	cmd := command.LatticeCommand{
 		Flags: map[string]cli.Flag{
-			command.OutputFlagName: command.OutputFlag(
-				&output,
-				[]printer.Format{
-					printer.FormatJSON,
-					printer.FormatTable,
-				},
-				printer.FormatTable,
-			),
 			command.SystemFlagName: &flags.String{
 				Required: true,
 				Target:   &system,
@@ -47,26 +32,26 @@ func Delete() *cli.Command {
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
-			format := printer.Format(output)
-			return DeleteSystem(ctx.Client, v1.SystemID(system), os.Stdout, format, watch)
+			return DeleteSystem(ctx.Client, v1.SystemID(system), watch)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func DeleteSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format, watch bool) error {
+// DeleteSystem deletes the system.
+func DeleteSystem(client client.Interface, id v1.SystemID, watch bool) error {
 	err := client.V1().Systems().Delete(id)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		return WatchSystemDelete(client, id, w, f)
+		return WatchSystemDelete(client, id)
 	}
 
-	fmt.Fprintf(
-		w, `system %s deleting
+	fmt.Printf(
+		`system %s deleting
 
 to watch progress, run:
   latticectl systems status --system %s -w
@@ -77,7 +62,8 @@ to watch progress, run:
 	return nil
 }
 
-func WatchSystemDelete(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+// WatchSystemDelete spins until the system has successfully been deleted.
+func WatchSystemDelete(client client.Interface, id v1.SystemID) error {
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Start()
 	s.Suffix = " system is deleting"
@@ -93,7 +79,7 @@ func WatchSystemDelete(client client.Interface, id v1.SystemID, w io.Writer, f p
 			switch v1err.Code {
 			case v1.ErrorCodeInvalidSystemID:
 				s.Stop()
-				fmt.Fprintf(w, color.BoldHiSuccessString("✓ system has been deleted\n"))
+				fmt.Printf(color.BoldHiSuccessString("✓ system has been deleted\n"))
 				return nil
 
 			default:

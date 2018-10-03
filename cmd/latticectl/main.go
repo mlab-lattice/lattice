@@ -19,5 +19,5 @@ func main() {
 }
 
 func Command() *cli.RootCommand {
-	return &latticectl.Command
+	return &latticectl.Latticectl
 }

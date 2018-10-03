@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Teardowns returns a *cli.Command to list a system's teardowns with subcommands to interact
+// with individual teardowns.
 func Teardowns() *cli.Command {
 	var (
 		output string
@@ -40,11 +42,10 @@ func Teardowns() *cli.Command {
 			format := printer.Format(output)
 
 			if watch {
-				WatchTeardowns(ctx.Client, ctx.System, format, os.Stdout)
-				return nil
+				return WatchTeardowns(ctx.Client, ctx.System, format)
 			}
 
-			return PrintTeardowns(ctx.Client, ctx.System, format, os.Stdout)
+			return PrintTeardowns(ctx.Client, ctx.System, os.Stdout, format)
 		},
 		Subcommands: map[string]*cli.Command{
 			"status": teardowns.Status(),
@@ -54,8 +55,8 @@ func Teardowns() *cli.Command {
 	return cmd.Command()
 }
 
-// PrintTeardowns writes the current Systems to the supplied io.Writer in the given printer.Format.
-func PrintTeardowns(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) error {
+// PrintTeardowns prints the system's teardowns to the supplied writer.
+func PrintTeardowns(client client.Interface, system v1.SystemID, w io.Writer, format printer.Format) error {
 	teardowns, err := client.V1().Systems().Teardowns(system).List()
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func PrintTeardowns(client client.Interface, system v1.SystemID, format printer.
 // WatchTeardowns polls the API for the current Systems, and writes out the Systems to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchTeardowns(client client.Interface, system v1.SystemID, format printer.Format, w io.Writer) {
+func WatchTeardowns(client client.Interface, system v1.SystemID, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
 	teardowns := make(chan []v1.Teardown)
 
@@ -102,25 +103,27 @@ func WatchTeardowns(client client.Interface, system v1.SystemID, format printer.
 	var handle func([]v1.Teardown)
 	switch format {
 	case printer.FormatTable:
-		t := teardownsTable(w)
+		t := teardownsTable(os.Stdout)
 		handle = func(teardowns []v1.Teardown) {
 			r := teardownsTableRows(teardowns)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
-		j := printer.NewJSON(w)
+		j := printer.NewJSON(os.Stdout)
 		handle = func(teardowns []v1.Teardown) {
 			j.Print(teardowns)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", format))
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
 	for d := range teardowns {
 		handle(d)
 	}
+
+	return nil
 }
 
 func teardownsTable(w io.Writer) *printer.Table {

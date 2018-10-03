@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
+// Create returns a *cli.Command to delete a context.
 func Delete() *cli.Command {
 	var (
 		configPath string

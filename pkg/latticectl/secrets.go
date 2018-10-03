@@ -5,6 +5,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
+// Jobs returns a *cli.Command with subcommands to interact with individual secrets.
 func Secrets() *cli.Command {
 	return &cli.Command{
 		Subcommands: map[string]*cli.Command{
