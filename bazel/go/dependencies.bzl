@@ -245,6 +245,12 @@ GO_DEPENDENCIES = {
             "tag": "kubernetes-1.10.8",
             "importpath": "k8s.io/client-go",
         },
+        "k8s.io/metrics": {
+            "name": "io_k8s_metrics",
+            "tag": "kubernetes-1.10.8",
+            "importpath": "k8s.io/metrics",
+        },
+
 
         # testing dependencies
         "github.com/onsi/ginkgo": {

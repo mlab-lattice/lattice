@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
+	metricsclient "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 func NewBackend(
@@ -27,6 +28,7 @@ type Backend struct {
 	namespacePrefix string
 	kubeClient      kubeclientset.Interface
 	latticeClient   latticeclientset.Interface
+	metricsClient	metricsclient.Interface
 }
 
 func (b *Backend) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {
