@@ -15,5 +15,8 @@ func NewServerOptions() *ServerOptions {
 }
 
 type ServerAuthOptions struct {
-	Token authenticator.Token
+	Token             authenticator.Token
+	OIDCIssuerURL     string
+	OIDCClientID      string
+	OIDCUsernameClaim string
 }

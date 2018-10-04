@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/oidc"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/authenticator/bearertoken"
 
@@ -52,6 +53,20 @@ func (r *restServer) initAuthenticators(options *ServerOptions) {
 		}
 		authenticators = append(authenticators, bearerAuthenticator)
 	}
+
+	// setup oidc oauth
+	if options.AuthOptions.OIDCIssuerURL != "" {
+		oidcTokenAuth := oidc.New(options.AuthOptions.OIDCIssuerURL,
+			options.AuthOptions.OIDCClientID, options.AuthOptions.OIDCUsernameClaim)
+
+		// create bearer oauth from oidc
+		oidcBearer, err := bearertoken.New(oidcTokenAuth)
+		if err != nil {
+			panic(err)
+		}
+		authenticators = append(authenticators, oidcBearer)
+	}
+
 	r.authenticators = authenticators
 }
 func (r *restServer) mountHandlers(options *ServerOptions) {
