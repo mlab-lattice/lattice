@@ -1,6 +1,7 @@
 package git
 
 import (
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -117,7 +118,11 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 
 	// If an SSH key was supplied, try to use it.
 	if ctx.Options.SSHKey != nil {
-		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
+		if err := validateSSHKey(ctx.Options.SSHKey); err != nil {
+			return nil, err
+		}
+
+		signer, err := ssh.ParsePrivateKey(ctx.Options.SSHKey)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +149,11 @@ func (r *Resolver) Fetch(ctx *Context) error {
 	}
 	// If an SSH key was supplied, try to use it.
 	if ctx.Options.SSHKey != nil {
-		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
+		if err := validateSSHKey(ctx.Options.SSHKey); err != nil {
+			return err
+		}
+
+		signer, err := ssh.ParsePrivateKey(ctx.Options.SSHKey)
 		if err != nil {
 			return newFetchError(err)
 		}
@@ -375,4 +384,13 @@ func stripProtocol(uri string) string {
 	}
 
 	return uri
+}
+
+func validateSSHKey(pemBytes []byte) error {
+	block, _ := pem.Decode(pemBytes)
+	if block != nil {
+		return nil
+	}
+
+	return fmt.Errorf("improperly formatted ssh key")
 }
