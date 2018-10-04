@@ -21,23 +21,8 @@ $ minikube start \
 
 ### Step 3: Create a role for your user in kubernetes
 
-1- Create a yaml file using the following template provide your email 
 ```
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: oidc-cluster-admins
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: oidc:<your email>
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: oidc:/cluster-admins
+$ kubectl create clusterrolebinding cluster-admin-minikube --clusterrole=cluster-admin --user="user@exmaple.com"
 ```
 
 2- Seed the file to kubernetes
