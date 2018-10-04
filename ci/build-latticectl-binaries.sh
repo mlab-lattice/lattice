@@ -39,9 +39,10 @@ for os in "${os_list[@]}"
 do
     for arch in "${arch_list[@]}"
     do
-        DEST=${BINARY_DIRECTORY}/latticectl_${os}_${arch}_v${TAG_NAME}
+        BASENAME=latticectl_${os}_${arch}_v${TAG_NAME}
+        DEST=${BINARY_DIRECTORY}/${BASENAME}
         cp bazel-bin/cmd/latticectl/${os}_${arch}_pure_stripped/latticectl ${DEST}
-        echo ${DEST} > ${METADATA_DIRECTORY}/${os}_filename
+        echo ${BASENAME} > ${METADATA_DIRECTORY}/${os}_filename
         shasum -a 256 ${DEST} | awk '{printf $1}' > ${METADATA_DIRECTORY}/${os}_shasum
     done
 done
