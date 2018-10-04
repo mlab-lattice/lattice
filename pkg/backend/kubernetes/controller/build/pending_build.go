@@ -87,7 +87,7 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		return err
 	}
 
-	t, err := c.componentResolver.Resolve(cmpnt, systemID, path, ctx, resolver.DepthInfinite)
+	t, err := c.componentResolver.Resolve(cmpnt, systemID, path, ctx, resolver.DefaultDepth)
 	if err != nil {
 		_, err := c.updateBuildStatus(
 			build,
