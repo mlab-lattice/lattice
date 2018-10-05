@@ -15,6 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/rest/v1/errors:go_default_library",
+        "//pkg/api/client/v1:go_default_library",
         "//pkg/api/v1:go_default_library",
         "//pkg/api/v1/rest:go_default_library",
         "//pkg/definition/tree:go_default_library",

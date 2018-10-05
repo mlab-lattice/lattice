@@ -84,6 +84,18 @@ func (c *FakeJobs) Update(job *lattice_v1.Job) (result *lattice_v1.Job, err erro
 	return obj.(*lattice_v1.Job), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeJobs) UpdateStatus(job *lattice_v1.Job) (*lattice_v1.Job, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(jobsResource, "status", c.ns, job), &lattice_v1.Job{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.Job), err
+}
+
 // Delete takes name of the job and deletes it. Returns an error if one occurs.
 func (c *FakeJobs) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

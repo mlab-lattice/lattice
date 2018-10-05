@@ -16,8 +16,6 @@ type GitTemplateExpansion interface{}
 
 type JobExpansion interface{}
 
-type JobRunExpansion interface{}
-
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}

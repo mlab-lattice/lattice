@@ -73,25 +73,7 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 
 	err = api.backend.Systems().Secrets(systemID).Set(path, req.Value)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		case v1.ErrorCodeConflict:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -114,22 +96,7 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 
 	secrets, err := api.backend.Systems().Secrets(systemID).List()
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -167,22 +134,7 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 
 	secret, err := api.backend.Systems().Secrets(systemID).Get(path)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSecret:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -219,25 +171,7 @@ func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 
 	err = api.backend.Systems().Secrets(systemID).Unset(path)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSecret:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		case v1.ErrorCodeConflict:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

@@ -29,7 +29,7 @@ import (
 
 type Controller struct {
 	syncHandler func(bKey string) error
-	enqueue     func(cb *latticev1.JobRun)
+	enqueue     func(cb *latticev1.Job)
 
 	namespacePrefix string
 	latticeID       v1.LatticeID
@@ -59,8 +59,8 @@ type Controller struct {
 	configLock         sync.RWMutex
 	config             latticev1.ConfigSpec
 
-	jobRunLister       latticelisters.JobRunLister
-	jobRunListerSynced cache.InformerSynced
+	jobLister       latticelisters.JobLister
+	jobListerSynced cache.InformerSynced
 
 	nodePoolLister       latticelisters.NodePoolLister
 	nodePoolListerSynced cache.InformerSynced
@@ -118,14 +118,14 @@ func NewController(
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
 
-	jobRunInformer := latticeInformerFactory.Lattice().V1().JobRuns()
-	jobRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	jobInformer := latticeInformerFactory.Lattice().V1().Jobs()
+	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleJobRunAdd,
 		UpdateFunc: sc.handleJobRunUpdate,
 		DeleteFunc: sc.handleJobRunDelete,
 	})
-	sc.jobRunLister = jobRunInformer.Lister()
-	sc.jobRunListerSynced = jobRunInformer.Informer().HasSynced
+	sc.jobLister = jobInformer.Lister()
+	sc.jobListerSynced = jobInformer.Informer().HasSynced
 
 	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -172,7 +172,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	if !cache.WaitForCacheSync(
 		stopCh,
 		c.configListerSynced,
-		c.jobRunListerSynced,
+		c.jobListerSynced,
 		c.nodePoolListerSynced,
 		c.kubeJobListerSynced,
 		c.podListerSynced,
@@ -199,7 +199,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) enqueueJobRun(svc *latticev1.JobRun) {
+func (c *Controller) enqueueJobRun(svc *latticev1.Job) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -270,26 +270,26 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	jobRun, err := c.jobRunLister.JobRuns(namespace).Get(name)
+	job, err := c.jobLister.Jobs(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			glog.V(2).Infof("jobRun %v has been deleted", key)
+			glog.V(2).Infof("job %v has been deleted", key)
 			return nil
 		}
 
 		return err
 	}
 
-	if jobRun.Deleted() {
-		return c.syncDeletedJobRun(jobRun)
+	if job.Deleted() {
+		return c.syncDeletedJob(job)
 	}
 
-	jobRun, err = c.addFinalizer(jobRun)
+	job, err = c.addFinalizer(job)
 	if err != nil {
 		return err
 	}
 
-	nodePool, err := c.nodePool(jobRun)
+	nodePool, err := c.nodePool(job)
 	if err != nil {
 		return err
 	}
@@ -299,13 +299,13 @@ func (c *Controller) syncJobRun(key string) error {
 		return nil
 	}
 
-	kubeJob, err := c.syncKubeJob(jobRun, nodePool)
+	kubeJob, err := c.syncKubeJob(job, nodePool)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.syncJobRunStatus(
-		jobRun,
+	_, err = c.syncJobStatus(
+		job,
 		kubeJob,
 	)
 	return err

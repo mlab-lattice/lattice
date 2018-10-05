@@ -20,6 +20,7 @@ var (
 	JobIDLabelKey = fmt.Sprintf("job.%v/id", GroupName)
 
 	// JobID label is the key that should be used for the path of the job.
+	// FIXME(kevindrosendahl): this should be hashed
 	JobPathLabelKey = fmt.Sprintf("job.%v/path", GroupName)
 )
 
@@ -29,7 +30,8 @@ var (
 type Job struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              JobSpec `json:"spec"`
+	Spec              JobSpec   `json:"spec"`
+	Status            JobStatus `json:"status,omitempty"`
 }
 
 func (s *Job) Deleted() bool {
@@ -44,16 +46,16 @@ func (s *Job) Description(namespacePrefix string) string {
 
 	path, err := s.PathLabel()
 	if err == nil {
-		return fmt.Sprintf("job %v (%v in system %v)", s.Name, path, systemID)
+		return fmt.Sprintf("job run %v (%v in system %v)", s.Name, path, systemID)
 	}
 
-	return fmt.Sprintf("job %v (no path, system %v)", s.Name, systemID)
+	return fmt.Sprintf("job run %v (no path, system %v)", s.Name, systemID)
 }
 
 func (s *Job) PathLabel() (tree.Path, error) {
 	path, ok := s.Labels[JobPathLabelKey]
 	if !ok {
-		return "", fmt.Errorf("job did not contain job path label")
+		return "", fmt.Errorf("job run did not contain job run path label")
 	}
 
 	return tree.NewPathFromDomain(path)
@@ -75,11 +77,35 @@ func (s *Job) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 type JobSpec struct {
 	Definition definitionv1.Job `json:"definition"`
 
-	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
+	NumRetries  *int32                                `json:"numRetries,omitempty"`
+	Command     []string                              `json:"command,omitempty"`
+	Environment definitionv1.ContainerExecEnvironment `json:"environment,omitempty"`
+
+	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
+type JobStatus struct {
+	State JobState `json:"state"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
+}
+
+type JobState string
+
+const (
+	JobStatePending  JobState = ""
+	JobStateDeleting JobState = "deleting"
+
+	JobStateQueued    JobState = "queued"
+	JobStateRunning   JobState = "running"
+	JobStateSucceeded JobState = "succeeded"
+	JobStateFailed    JobState = "failed"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type JobList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

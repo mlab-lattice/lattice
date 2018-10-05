@@ -72,12 +72,8 @@ func (b *Backend) List() ([]v1.System, error) {
 }
 
 func (b *Backend) Get(id v1.SystemID) (*v1.System, error) {
-	system, err := b.latticeClient.LatticeV1().Systems(b.internalNamespace()).Get(string(id), metav1.GetOptions{})
+	system, err := b.getLatticeV1System(id)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidSystemIDError()
-		}
-
 		return nil, err
 	}
 
@@ -138,6 +134,19 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 	}
 
 	return externalSystem, nil
+}
+
+func (b *Backend) getLatticeV1System(id v1.SystemID) (*latticev1.System, error) {
+	system, err := b.latticeClient.LatticeV1().Systems(b.internalNamespace()).Get(string(id), metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, v1.NewInvalidSystemIDError()
+		}
+
+		return nil, err
+	}
+
+	return system, nil
 }
 
 func getSystemState(state latticev1.SystemState, updateProcessed bool) (v1.SystemState, error) {

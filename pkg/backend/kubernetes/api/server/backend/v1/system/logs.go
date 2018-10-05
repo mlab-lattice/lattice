@@ -13,15 +13,15 @@ import (
 
 var sinceRegex = regexp.MustCompile(`^([0-9]+)([smh])$`)
 
-func toPodLogOptions(logOptions *v1.ContainerLogOptions) (*corev1.PodLogOptions, error) {
-
+func toPodLogOptions(logOptions *v1.ContainerLogOptions, container string) (*corev1.PodLogOptions, error) {
 	podLogOptions := &corev1.PodLogOptions{
-		Follow:       logOptions.Follow,
-		TailLines:    logOptions.Tail,
-		Previous:     logOptions.Previous,
-		Timestamps:   logOptions.Timestamps,
-		SinceSeconds: nil,
+		Container:  container,
+		Follow:     logOptions.Follow,
+		TailLines:  logOptions.Tail,
+		Previous:   logOptions.Previous,
+		Timestamps: logOptions.Timestamps,
 	}
+
 	// sinceTime
 	if logOptions.SinceTime != "" {
 		t, err := time.Parse(time.RFC3339, logOptions.SinceTime)

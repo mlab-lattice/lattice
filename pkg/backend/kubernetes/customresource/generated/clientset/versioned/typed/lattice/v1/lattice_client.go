@@ -18,7 +18,6 @@ type LatticeV1Interface interface {
 	DeploysGetter
 	GitTemplatesGetter
 	JobsGetter
-	JobRunsGetter
 	NodePoolsGetter
 	ServicesGetter
 	SystemsGetter
@@ -57,10 +56,6 @@ func (c *LatticeV1Client) GitTemplates(namespace string) GitTemplateInterface {
 
 func (c *LatticeV1Client) Jobs(namespace string) JobInterface {
 	return newJobs(c, namespace)
-}
-
-func (c *LatticeV1Client) JobRuns(namespace string) JobRunInterface {
-	return newJobRuns(c, namespace)
 }
 
 func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {

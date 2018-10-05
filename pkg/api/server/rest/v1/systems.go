@@ -58,22 +58,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 	system, err := api.backend.Systems().Define(req.ID, req.DefinitionURL)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeSystemAlreadyExists:
-			c.JSON(http.StatusConflict, v1err)
-
-		case v1.ErrorCodeInvalidSystemOptions:
-			c.JSON(http.StatusBadRequest, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -94,7 +79,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 	systems, err := api.backend.Systems().List()
 	if err != nil {
-		handleInternalError(c, err)
+		handleError(c, err)
 		return
 	}
 
@@ -118,22 +103,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 
 	system, err := api.backend.Systems().Get(systemID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusBadRequest, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -157,25 +127,7 @@ func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 
 	err := api.backend.Systems().Delete(systemID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusBadRequest, v1err)
-
-		case v1.ErrorCodeConflict:
-			c.JSON(http.StatusConflict, v1err)
-
-		case v1.ErrorCodeSystemDeleting:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

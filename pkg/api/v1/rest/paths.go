@@ -19,9 +19,11 @@ const (
 	SystemSecretsPathFormat = SystemPathFormat + "/secrets"
 	SystemSecretPathFormat  = SystemSecretsPathFormat + "/%v"
 
-	JobsPathFormat    = SystemPathFormat + "/jobs"
-	JobPathFormat     = JobsPathFormat + "/%v"
-	JobLogsPathFormat = JobPathFormat + "/logs"
+	JobsPathFormat       = SystemPathFormat + "/jobs"
+	JobPathFormat        = JobsPathFormat + "/%v"
+	JobRunsPathFormat    = JobPathFormat + "/runs"
+	JobRunPathFormat     = JobRunsPathFormat + "/%v"
+	JobRunLogsPathFormat = JobRunPathFormat + "/logs"
 
 	ServicesPathFormat    = SystemPathFormat + "/services"
 	ServicePathFormat     = ServicesPathFormat + "/%v"

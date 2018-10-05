@@ -7,6 +7,7 @@ go_library(
         "build.go",
         "deploy.go",
         "job.go",
+        "job_run.go",
         "logs.go",
         "node_pool.go",
         "secret.go",

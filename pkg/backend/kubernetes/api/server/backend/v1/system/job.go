@@ -2,23 +2,17 @@ package system
 
 import (
 	"fmt"
-	"io"
 
+	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	corev1 "k8s.io/api/core/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/mlab-lattice/lattice/pkg/util/time"
 	"github.com/satori/go.uuid"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 type jobBackend struct {
@@ -38,36 +32,36 @@ func (b *jobBackend) Run(
 	}
 
 	namespace := b.backend.systemNamespace(b.system)
-	job, err := b.getJob(path, namespace)
+	definition, artifacts, err := b.getJobInformation(path, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	jobRun := &latticev1.JobRun{
+	job := &latticev1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewV4().String(),
 			Labels: map[string]string{
-				latticev1.JobRunPathLabelKey: path.ToDomain(),
+				latticev1.JobPathLabelKey: path.ToDomain(),
 			},
 		},
-		Spec: latticev1.JobRunSpec{
-			Definition: job.Spec.Definition,
+		Spec: latticev1.JobSpec{
+			Definition: *definition,
 
 			Command:     command,
 			Environment: environment,
 
 			NumRetries: numRetries,
 
-			ContainerBuildArtifacts: job.Spec.ContainerBuildArtifacts,
+			ContainerBuildArtifacts: artifacts,
 		},
 	}
 
-	result, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Create(jobRun)
+	result, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).Create(job)
 	if err != nil {
 		return nil, fmt.Errorf("error trying to create job run: %v", err)
 	}
 
-	externalJob, err := b.transformJobRun(v1.JobID(result.Name), path, &result.Status, namespace)
+	externalJob, err := b.transformJob(v1.JobID(result.Name), path, &result.Status, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -82,24 +76,24 @@ func (b *jobBackend) List() ([]v1.Job, error) {
 	}
 
 	namespace := b.backend.systemNamespace(b.system)
-	jobRuns, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).List(metav1.ListOptions{})
+	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var externalJobs []v1.Job
-	for _, jobRun := range jobRuns.Items {
-		path, err := jobRun.PathLabel()
+	for _, job := range jobs.Items {
+		path, err := job.PathLabel()
 		if err != nil {
 			return nil, err
 		}
 
-		externalJobRun, err := b.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
+		externalJob, err := b.transformJob(v1.JobID(job.Name), path, &job.Status, namespace)
 		if err != nil {
 			return nil, err
 		}
 
-		externalJobs = append(externalJobs, externalJobRun)
+		externalJobs = append(externalJobs, externalJob)
 	}
 
 	return externalJobs, nil
@@ -112,7 +106,7 @@ func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 	}
 
 	namespace := b.backend.systemNamespace(b.system)
-	jobRun, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Get(string(id), metav1.GetOptions{})
+	jobRun, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +116,7 @@ func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 		return nil, err
 	}
 
-	externalJob, err := b.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
+	externalJob, err := b.transformJob(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -130,122 +124,62 @@ func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 	return &externalJob, nil
 }
 
-func (b *jobBackend) Logs(
-	id v1.JobID,
-	sidecar *string,
-	logOptions *v1.ContainerLogOptions,
-) (io.ReadCloser, error) {
-	// Ensure the system exists
-	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
-		return nil, err
+func (b *jobBackend) Instances(id v1.JobID) backendv1.SystemJobRunBackend {
+	return &jobRunBackend{
+		backend: b.backend,
+		system:  b.system,
+		job:     id,
 	}
-
-	namespace := b.backend.systemNamespace(b.system)
-
-	_, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Get(string(id), metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidJobIDError()
-		}
-		return nil, err
-	}
-
-	pod, err := b.findJobPod(id, namespace)
-	if err != nil {
-		// FIXME(kevindrosendahl): this will always fail with a retry policy > 0 and a failed attempt
-		if err == noJobPodErr || err == multipleJobPodsErr {
-			return nil, v1.NewInvalidInstanceError()
-		}
-		return nil, err
-	}
-
-	container := kubeutil.UserMainContainerName
-	if sidecar != nil {
-		container = kubeutil.UserSidecarContainerName(*sidecar)
-	}
-
-	podLogOptions, err := toPodLogOptions(logOptions)
-	if err != nil {
-		return nil, err
-	}
-	podLogOptions.Container = container
-
-	req := b.backend.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
-	r, err := req.Stream()
-	if err != nil {
-		// TODO(kevindrosendahl): a BadRequest error is returned when trying tail the logs of a
-		//                        container that is still creating. probably want to see if there's
-		//                        a way other than matching against the err.Message
-		if errors.IsBadRequest(err) {
-			return nil, v1.NewInvalidInstanceError()
-		}
-	}
-
-	return r, err
 }
 
-func (b *jobBackend) getJob(path tree.Path, namespace string) (*latticev1.Job, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
+func (b *jobBackend) getJobInformation(
+	path tree.Path,
+	namespace string,
+) (
+	*definitionv1.Job,
+	latticev1.WorkloadContainerBuildArtifacts,
+	error,
+) {
+	system, err := b.backend.getLatticeV1System(b.system)
 	if err != nil {
-		return nil, fmt.Errorf("error creating requirement for job %v/%v lookup: %v", namespace, path.String(), err)
-	}
-	selector = selector.Add(*requirement)
-
-	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return nil, err
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, err
 	}
 
-	if len(jobs.Items) == 0 {
-		return nil, v1.NewInvalidPathError()
+	if system.Spec.Definition == nil {
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, v1.NewInvalidPathError()
 	}
 
-	if len(jobs.Items) != 1 {
-		err := fmt.Errorf("expected to find a job for %v in %v but found %v", path.String(), namespace, len(jobs.Items))
-		return nil, err
+	info, ok := system.Spec.Definition.V1().Get(path)
+	if !ok {
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, v1.NewInvalidPathError()
 	}
 
-	return &jobs.Items[0], nil
+	job, ok := info.Component.(*definitionv1.Job)
+	if !ok {
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, v1.NewInvalidComponentTypeError()
+	}
+
+	if system.Spec.WorkloadBuildArtifacts == nil {
+		err := fmt.Errorf("%v has non-nil definition but nil workload build artifacts", system.Description())
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, err
+	}
+
+	artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
+	if !ok {
+		err := fmt.Errorf("%v has job %v in definition but no workload build artifacts", system.Description(), path.String())
+		return nil, latticev1.WorkloadContainerBuildArtifacts{}, err
+	}
+
+	return job, artifacts, nil
 }
 
-var (
-	noJobPodErr        = fmt.Errorf("no pods found for job")
-	multipleJobPodsErr = fmt.Errorf("multiple pods found for job")
-)
-
-// findServicePod finds service pod by instance id or service's single pod if id was not specified
-func (b *jobBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobRunIDLabelKey, selection.Equals, []string{string(jobID)})
-	if err != nil {
-		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, jobID, err)
-	}
-
-	selector = selector.Add(*requirement)
-	pods, err := b.backend.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(pods.Items) > 1 {
-		return nil, multipleJobPodsErr
-	}
-
-	if len(pods.Items) == 0 {
-		return nil, noJobPodErr
-	}
-
-	return &pods.Items[0], nil
-}
-
-func (b *jobBackend) transformJobRun(
+func (b *jobBackend) transformJob(
 	id v1.JobID,
 	path tree.Path,
-	status *latticev1.JobRunStatus,
+	status *latticev1.JobStatus,
 	namespace string,
 ) (v1.Job, error) {
-	state, err := getJobRunStateState(status.State)
+	state, err := getJobState(status.State)
 	if err != nil {
 		return v1.Job{}, err
 	}
@@ -275,20 +209,20 @@ func (b *jobBackend) transformJobRun(
 	return job, nil
 }
 
-func getJobRunStateState(state latticev1.JobRunState) (v1.JobState, error) {
+func getJobState(state latticev1.JobState) (v1.JobState, error) {
 	switch state {
-	case latticev1.JobRunStatePending:
+	case latticev1.JobStatePending:
 		return v1.JobStatePending, nil
-	case latticev1.JobRunStateDeleting:
+	case latticev1.JobStateDeleting:
 		return v1.JobStateDeleting, nil
 
-	case latticev1.JobRunStateQueued:
+	case latticev1.JobStateQueued:
 		return v1.JobStateQueued, nil
-	case latticev1.JobRunStateRunning:
+	case latticev1.JobStateRunning:
 		return v1.JobStateRunning, nil
-	case latticev1.JobRunStateSucceeded:
+	case latticev1.JobStateSucceeded:
 		return v1.JobStateSucceeded, nil
-	case latticev1.JobRunStateFailed:
+	case latticev1.JobStateFailed:
 		return v1.JobStateFailed, nil
 	default:
 		return "", fmt.Errorf("invalid job state: %v", state)

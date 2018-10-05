@@ -1,9 +1,8 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/util/time"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 type (
@@ -31,8 +30,6 @@ type Job struct {
 type JobStatus struct {
 	State JobState `json:"state"`
 
-	Attempts map[string]JobStatusAttempt `json:"attempts,omitempty"`
-
 	Successes int32 `json:"successes"`
 	Failures  int32 `json:"failures"`
 
@@ -40,5 +37,28 @@ type JobStatus struct {
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }
 
-type JobStatusAttempt struct {
+type (
+	JobRunID    string
+	JobRunState string
+)
+
+const (
+	JobRunStatePending   JobRunState = "pending"
+	JobRunStateRunning   JobRunState = "running"
+	JobRunStateSucceeded JobRunState = "succeeded"
+	JobRunStateFailed    JobRunState = "failed"
+	JobRunStateUnknown   JobRunState = "unknown"
+)
+
+type JobRun struct {
+	ID JobRunID `json:"id"`
+
+	Status JobRunStatus `json:"status"`
+}
+
+type JobRunStatus struct {
+	State JobRunState `json:"state"`
+
+	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }

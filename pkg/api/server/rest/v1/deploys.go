@@ -78,22 +78,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	}
 
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -116,22 +101,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 
 	deploys, err := api.backend.Systems().Deploys(systemID).List()
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -157,22 +127,7 @@ func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 
 	deploy, err := api.backend.Systems().Deploys(systemID).Get(deployID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidDeployID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

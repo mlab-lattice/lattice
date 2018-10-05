@@ -36,19 +36,7 @@ func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 
 	system, err := api.backend.Systems().Get(systemID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

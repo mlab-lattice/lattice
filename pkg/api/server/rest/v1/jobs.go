@@ -10,13 +10,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const jobIdentifier = "job_id"
+const (
+	jobIdentifier    = "job_id"
+	jobRunIdentifier = "job_run_id"
+)
 
 var (
-	jobsPath                   = fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
-	jobIdentifierPathComponent = fmt.Sprintf(":%v", jobIdentifier)
-	jobPath                    = fmt.Sprintf(v1rest.JobPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
-	jobLogPath                 = fmt.Sprintf(v1rest.JobLogsPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
+	jobsPath                      = fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
+	jobIdentifierPathComponent    = fmt.Sprintf(":%v", jobIdentifier)
+	jobPath                       = fmt.Sprintf(v1rest.JobPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
+	jobRunsPath                   = fmt.Sprintf(v1rest.JobRunsPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
+	jobRunIdentifierPathComponent = fmt.Sprintf(":%v", jobRunIdentifier)
+	jobRunPath                    = fmt.Sprintf(v1rest.JobRunPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent, jobRunIdentifierPathComponent)
+	jobRunLogPath                 = fmt.Sprintf(v1rest.JobRunLogsPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent, jobRunIdentifierPathComponent)
 )
 
 func (api *LatticeAPI) setupJobsEndpoints() {
@@ -30,9 +36,14 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 	// get-job
 	api.router.GET(jobPath, api.handleGetJob)
 
-	// get-job-logs
-	api.router.GET(jobLogPath, api.handleGetJobLogs)
+	// list-job-runs
+	api.router.GET(jobRunsPath, api.handleListJobRuns)
 
+	// get-job-run
+	api.router.GET(jobRunPath, api.handleGetJobRun)
+
+	// get-job-run-logs
+	api.router.GET(jobRunLogPath, api.handleGetJobRunLogs)
 }
 
 // handleRunJob handler for run-job
@@ -59,22 +70,7 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 
 	job, err := api.backend.Systems().Jobs(systemID).Run(req.Path, req.Command, req.Environment, req.NumRetries)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidPath:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -97,22 +93,7 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 
 	jobs, err := api.backend.Systems().Jobs(systemID).List()
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -138,37 +119,76 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 
 	job, err := api.backend.Systems().Jobs(systemID).Get(jobID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidJobID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, job)
 }
 
-// handleGetJobLogs handler for get-job-logs
-// @ID get-job-logs
-// @Summary Get job logs
-// @Description Retrieves/Streams logs for job
-// @Router /systems/{system}/jobs/{id}/logs  [get]
+// handleListJobRuns handler for list-job-runs
+// @ID list-job-runs
+// @Summary Lists job runs
+// @Description Lists all job runs
+// @Router /systems/{system}/jobs/{job} [get]
 // @Security ApiKeyAuth
-// @Tags jobs
+// @Tags jobRuns
 // @Param system path string true "System ID"
-// @Param id path string true "Job ID"
+// @Param job path string true "Job ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} v1.JobRun
+func (api *LatticeAPI) handleListJobRuns(c *gin.Context) {
+	systemID := v1.SystemID(c.Param(systemIdentifier))
+	jobID := v1.JobID(c.Param(jobIdentifier))
+
+	runs, err := api.backend.Systems().Jobs(systemID).Runs(jobID).List()
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, runs)
+}
+
+// handleGetJobRun handler for get-job-run
+// @ID get-job-run
+// @Summary Get job run
+// @Description Gets the job run object
+// @Router /systems/{system}/jobs/{job}/run/{id} [get]
+// @Security ApiKeyAuth
+// @Tags jobsRuns
+// @Param system path string true "System ID"
+// @Param job path string true "Job ID"
+// @Param id path string true "Job Run ID"
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} v1.JobRun
+// @Failure 404 {object} v1.ErrorResponse
+func (api *LatticeAPI) handleGetJobRun(c *gin.Context) {
+	systemID := v1.SystemID(c.Param(systemIdentifier))
+	jobID := v1.JobID(c.Param(jobIdentifier))
+	runID := v1.JobRunID(c.Param(jobRunIdentifier))
+
+	run, err := api.backend.Systems().Jobs(systemID).Runs(jobID).Get(runID)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, run)
+}
+
+// handleGetJobLogs handler for get-job-run-logs
+// @ID get-job-run-logs
+// @Summary Get job run logs
+// @Description Retrieves/Streams logs for job
+// @Router /systems/{system}/jobs/{job}/runs/{id}logs  [get]
+// @Security ApiKeyAuth
+// @Tags jobRuns
+// @Param system path string true "System ID"
+// @Param job path string true "Job ID"
+// @Param id path string true "Job Run ID"
 // @Param sidecar query string false "Sidecar"
 // @Param follow query string bool "Follow"
 // @Param previous query boolean false "Previous"
@@ -180,9 +200,10 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 // @Produce  json
 // @Success 200 {string} string "log stream"
 // @Failure 404 {object} v1.ErrorResponse
-func (api *LatticeAPI) handleGetJobLogs(c *gin.Context) {
+func (api *LatticeAPI) handleGetJobRunLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	jobID := v1.JobID(c.Param(jobIdentifier))
+	runID := v1.JobRunID(c.Param(jobRunIdentifier))
 
 	sidecarQuery, sidecarSet := c.GetQuery("sidecar")
 	var sidecar *string
@@ -197,24 +218,9 @@ func (api *LatticeAPI) handleGetJobLogs(c *gin.Context) {
 		return
 	}
 
-	log, err := api.backend.Systems().Jobs(systemID).Logs(jobID, sidecar, logOptions)
+	log, err := api.backend.Systems().Jobs(systemID).Runs(jobID).Logs(runID, sidecar, logOptions)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidJobID, v1.ErrorCodeInvalidInstance:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

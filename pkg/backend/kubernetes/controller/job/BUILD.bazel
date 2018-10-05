@@ -3,10 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "deleted_job_run.go",
+        "deleted_job.go",
         "informer_event_handlers.go",
+        "job.go",
         "job_controller.go",
-        "job_run.go",
         "kube_job.go",
         "node_pool.go",
     ],

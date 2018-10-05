@@ -89,7 +89,7 @@ func JobLogs(
 			// TODO(kevindrosendahl): ^ is somewhat a lie.
 			//                        currently in the k8s backend, it means either there are 0 or multiple
 			//                        pods for the job. should refine this in both latticectl and the api
-			if v1err.Code != v1.ErrorCodeInvalidInstance {
+			if v1err.Code != v1.ErrorCodeInvalidServiceInstanceID {
 				return err
 			}
 

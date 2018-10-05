@@ -10,14 +10,14 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (c *Controller) nodePool(jobRun *latticev1.JobRun) (*latticev1.NodePool, error) {
-	nodePoolPath := jobRun.Spec.Definition.NodePool
-	selector, err := sharedNodePoolSelector(jobRun.Namespace, nodePoolPath.Path(), nodePoolPath.Subcomponent())
+func (c *Controller) nodePool(job *latticev1.Job) (*latticev1.NodePool, error) {
+	nodePoolPath := job.Spec.Definition.NodePool
+	selector, err := sharedNodePoolSelector(job.Namespace, nodePoolPath.Path(), nodePoolPath.Subcomponent())
 	if err != nil {
 		return nil, err
 	}
 
-	nodePools, err := c.nodePoolLister.NodePools(jobRun.Namespace).List(selector)
+	nodePools, err := c.nodePoolLister.NodePools(job.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (c *Controller) nodePool(jobRun *latticev1.JobRun) (*latticev1.NodePool, er
 		err := fmt.Errorf(
 			"found multiple shared node pools matching path %v in namespace %v",
 			nodePoolPath.String(),
-			jobRun.Namespace,
+			job.Namespace,
 		)
 		return nil, err
 	}

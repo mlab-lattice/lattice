@@ -22,8 +22,6 @@ type Interface interface {
 	GitTemplates() GitTemplateInformer
 	// Jobs returns a JobInformer.
 	Jobs() JobInformer
-	// JobRuns returns a JobRunInformer.
-	JobRuns() JobRunInformer
 	// NodePools returns a NodePoolInformer.
 	NodePools() NodePoolInformer
 	// Services returns a ServiceInformer.
@@ -80,11 +78,6 @@ func (v *version) GitTemplates() GitTemplateInformer {
 // Jobs returns a JobInformer.
 func (v *version) Jobs() JobInformer {
 	return &jobInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// JobRuns returns a JobRunInformer.
-func (v *version) JobRuns() JobRunInformer {
-	return &jobRunInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NodePools returns a NodePoolInformer.

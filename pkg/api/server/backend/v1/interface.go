@@ -52,7 +52,13 @@ type SystemJobBackend interface {
 	) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
-	Logs(id v1.JobID, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Runs(v1.JobID) SystemJobRunBackend
+}
+
+type SystemJobRunBackend interface {
+	List() ([]v1.JobRun, error)
+	Get(v1.JobRunID) (*v1.JobRun, error)
+	Logs(id v1.JobRunID, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemNodePoolBackend interface {

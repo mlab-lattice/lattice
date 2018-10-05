@@ -58,14 +58,6 @@ type JobListerExpansion interface{}
 // JobNamespaceLister.
 type JobNamespaceListerExpansion interface{}
 
-// JobRunListerExpansion allows custom methods to be added to
-// JobRunLister.
-type JobRunListerExpansion interface{}
-
-// JobRunNamespaceListerExpansion allows custom methods to be added to
-// JobRunNamespaceLister.
-type JobRunNamespaceListerExpansion interface{}
-
 // NodePoolListerExpansion allows custom methods to be added to
 // NodePoolLister.
 type NodePoolListerExpansion interface{}

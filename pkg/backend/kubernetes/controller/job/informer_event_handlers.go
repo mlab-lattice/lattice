@@ -285,7 +285,7 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 		return
 	}
 
-	jobRun, err := c.jobRunLister.JobRuns(pod.Namespace).Get(jobRunID)
+	jobRun, err := c.jobLister.JobRuns(pod.Namespace).Get(jobRunID)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// jobRun doesn't exist anymore, so it doesn't care about this
@@ -311,7 +311,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 
-	jobRun, err := c.jobRunLister.JobRuns(namespace).Get(controllerRef.Name)
+	jobRun, err := c.jobLister.JobRuns(namespace).Get(controllerRef.Name)
 	if err != nil {
 		// FIXME(kevindrosendahl): send error?
 		return nil

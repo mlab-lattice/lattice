@@ -14,37 +14,37 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func (c *Controller) syncJobRunStatus(jobRun *latticev1.JobRun, kubeJob *batchv1.Job) (*latticev1.JobRun, error) {
-	startTimestamp := jobRun.Status.StartTimestamp
+func (c *Controller) syncJobStatus(job *latticev1.Job, kubeJob *batchv1.Job) (*latticev1.Job, error) {
+	startTimestamp := job.Status.StartTimestamp
 	if startTimestamp == nil {
 		now := metav1.Now()
 		startTimestamp = &now
 	}
 
-	completionTimestamp := jobRun.Status.CompletionTimestamp
+	completionTimestamp := job.Status.CompletionTimestamp
 	if completionTimestamp == nil {
 		now := metav1.Now()
 		completionTimestamp = &now
 	}
 
-	state := jobRunState(kubeJob.Status)
-	return c.updateJobRunStatus(jobRun, state, startTimestamp, completionTimestamp)
+	state := jobState(kubeJob.Status)
+	return c.updateJobStatus(job, state, startTimestamp, completionTimestamp)
 }
 
-func jobRunState(kubeJobStatus batchv1.JobStatus) latticev1.JobRunState {
+func jobState(kubeJobStatus batchv1.JobStatus) latticev1.JobState {
 	if kubeJobStatusContainsCondition(kubeJobStatus, batchv1.JobComplete) {
-		return latticev1.JobRunStateSucceeded
+		return latticev1.JobStateSucceeded
 	}
 
 	if kubeJobStatusContainsCondition(kubeJobStatus, batchv1.JobFailed) {
-		return latticev1.JobRunStateFailed
+		return latticev1.JobStateFailed
 	}
 
 	if kubeJobStatus.Active > 0 || kubeJobStatus.Failed > 0 || kubeJobStatus.Succeeded > 0 {
-		return latticev1.JobRunStateRunning
+		return latticev1.JobStateRunning
 	}
 
-	return latticev1.JobRunStateQueued
+	return latticev1.JobStateQueued
 }
 
 func kubeJobStatusContainsCondition(kubeJobStatus batchv1.JobStatus, conditionType batchv1.JobConditionType) bool {
@@ -57,57 +57,57 @@ func kubeJobStatusContainsCondition(kubeJobStatus batchv1.JobStatus, conditionTy
 	return false
 }
 
-func (c *Controller) updateJobRunStatus(
-	jobRun *latticev1.JobRun,
-	state latticev1.JobRunState,
+func (c *Controller) updateJobStatus(
+	job *latticev1.Job,
+	state latticev1.JobState,
 	startTimestamp, completionTimestamp *metav1.Time,
-) (*latticev1.JobRun, error) {
-	status := latticev1.JobRunStatus{
+) (*latticev1.Job, error) {
+	status := latticev1.JobStatus{
 		State:               state,
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 	}
 
-	if reflect.DeepEqual(jobRun.Status, status) {
-		return jobRun, nil
+	if reflect.DeepEqual(job.Status, status) {
+		return job, nil
 	}
 
 	// copy so we don't mutate the cache
-	jobRun = jobRun.DeepCopy()
-	jobRun.Status = status
+	job = job.DeepCopy()
+	job.Status = status
 
-	result, err := c.latticeClient.LatticeV1().JobRuns(jobRun.Namespace).UpdateStatus(jobRun)
+	result, err := c.latticeClient.LatticeV1().Jobs(job.Namespace).UpdateStatus(job)
 	if err != nil {
-		return nil, fmt.Errorf("error updating status for %v: %v", jobRun.Description(c.namespacePrefix), err)
+		return nil, fmt.Errorf("error updating status for %v: %v", job.Description(c.namespacePrefix), err)
 	}
 
 	return result, nil
 }
 
-func (c *Controller) nodePoolJobRuns(nodePool *latticev1.NodePool) ([]latticev1.JobRun, error) {
+func (c *Controller) nodePoolJobs(nodePool *latticev1.NodePool) ([]latticev1.Job, error) {
 	_, ok, err := nodePool.SystemSharedPathLabel()
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		jobRuns, err := c.jobRunLister.JobRuns(nodePool.Namespace).List(labels.Everything())
+		jobs, err := c.jobLister.Jobs(nodePool.Namespace).List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
 
-		var nodePoolJobRuns []latticev1.JobRun
-		for _, jobRun := range jobRuns {
+		var nodePoolJobs []latticev1.Job
+		for _, job := range jobs {
 			// FIXME: this method was not working for services that had not yet annotated themselves
-			//nodePools, err := jobRun.NodePoolAnnotation()
+			//nodePools, err := job.NodePoolAnnotation()
 			//if err != nil {
 			//	continue
 			//}
 
 			//if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
-			nodePoolJobRuns = append(nodePoolJobRuns, *jobRun)
+			nodePoolJobs = append(nodePoolJobs, *job)
 			//}
 		}
-		return nodePoolJobRuns, nil
+		return nodePoolJobs, nil
 	}
 
 	err = fmt.Errorf(
@@ -118,30 +118,30 @@ func (c *Controller) nodePoolJobRuns(nodePool *latticev1.NodePool) ([]latticev1.
 	return nil, err
 }
 
-func (c *Controller) addFinalizer(jobRun *latticev1.JobRun) (*latticev1.JobRun, error) {
+func (c *Controller) addFinalizer(job *latticev1.Job) (*latticev1.Job, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
-	for _, finalizer := range jobRun.Finalizers {
+	for _, finalizer := range job.Finalizers {
 		if finalizer == kubeutil.JobControllerFinalizer {
-			return jobRun, nil
+			return job, nil
 		}
 	}
 
 	// Copy so we don't mutate the shared cache
-	jobRun = jobRun.DeepCopy()
-	jobRun.Finalizers = append(jobRun.Finalizers, kubeutil.JobControllerFinalizer)
+	job = job.DeepCopy()
+	job.Finalizers = append(job.Finalizers, kubeutil.JobControllerFinalizer)
 
-	result, err := c.latticeClient.LatticeV1().JobRuns(jobRun.Namespace).Update(jobRun)
+	result, err := c.latticeClient.LatticeV1().Jobs(job.Namespace).Update(job)
 	if err != nil {
-		return nil, fmt.Errorf("error adding %v finalizer: %v", jobRun.Description(c.namespacePrefix), err)
+		return nil, fmt.Errorf("error adding %v finalizer: %v", job.Description(c.namespacePrefix), err)
 	}
 
 	return result, nil
 }
 
-func (c *Controller) removeFinalizer(jobRun *latticev1.JobRun) (*latticev1.JobRun, error) {
+func (c *Controller) removeFinalizer(job *latticev1.Job) (*latticev1.Job, error) {
 	var finalizers []string
 	found := false
-	for _, finalizer := range jobRun.Finalizers {
+	for _, finalizer := range job.Finalizers {
 		if finalizer == kubeutil.JobControllerFinalizer {
 			found = true
 			continue
@@ -151,16 +151,16 @@ func (c *Controller) removeFinalizer(jobRun *latticev1.JobRun) (*latticev1.JobRu
 
 	// If the finalizer wasn't part of the list, nothing to do.
 	if !found {
-		return jobRun, nil
+		return job, nil
 	}
 
 	// Copy so we don't mutate the shared cache
-	jobRun = jobRun.DeepCopy()
-	jobRun.Finalizers = finalizers
+	job = job.DeepCopy()
+	job.Finalizers = finalizers
 
-	result, err := c.latticeClient.LatticeV1().JobRuns(jobRun.Namespace).Update(jobRun)
+	result, err := c.latticeClient.LatticeV1().Jobs(job.Namespace).Update(job)
 	if err != nil {
-		return nil, fmt.Errorf("error removing %v finalizer: %v", jobRun.Description(c.namespacePrefix), err)
+		return nil, fmt.Errorf("error removing %v finalizer: %v", job.Description(c.namespacePrefix), err)
 	}
 
 	return result, nil

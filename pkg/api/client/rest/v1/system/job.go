@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
+	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -18,14 +19,14 @@ import (
 type JobClient struct {
 	restClient   rest.Client
 	apiServerURL string
-	systemID     v1.SystemID
+	system       v1.SystemID
 }
 
 func NewJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *JobClient {
 	return &JobClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
-		systemID:     systemID,
+		system:       systemID,
 	}
 }
 
@@ -46,7 +47,7 @@ func (c *JobClient) Run(
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.systemID))
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.system))
 	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (c *JobClient) Run(
 }
 
 func (c *JobClient) List() ([]v1.Job, error) {
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.systemID))
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.system))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
@@ -80,14 +81,14 @@ func (c *JobClient) List() ([]v1.Job, error) {
 }
 
 func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobPathFormat, c.systemID, id))
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobPathFormat, c.system, id))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
 
 	if statusCode == http.StatusOK {
-		job := &v1.Job{}
+		job := new(v1.Job)
 		err = rest.UnmarshalBodyJSON(body, &job)
 		return job, err
 	}
@@ -95,15 +96,68 @@ func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
 	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *JobClient) Logs(
-	id v1.JobID,
+func (c *JobClient) Runs(id v1.JobID) clientv1.SystemJobRunClient {
+	return NewJobRunClient(c.restClient, c.apiServerURL, c.system, id)
+}
+
+type JobRunClient struct {
+	restClient   rest.Client
+	apiServerURL string
+	system       v1.SystemID
+	job          v1.JobID
+}
+
+func NewJobRunClient(c rest.Client, apiServerURL string, system v1.SystemID, job v1.JobID) *JobRunClient {
+	return &JobRunClient{
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		system:       system,
+		job:          job,
+	}
+}
+
+func (c *JobRunClient) List() ([]v1.JobRun, error) {
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobRunsPathFormat, c.system, c.job))
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if statusCode == http.StatusOK {
+		var runs []v1.JobRun
+		err = rest.UnmarshalBodyJSON(body, &runs)
+		return runs, err
+	}
+
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *JobRunClient) Get(id v1.JobRunID) (*v1.JobRun, error) {
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobRunPathFormat, c.system, c.job, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		run := new(v1.JobRun)
+		err = rest.UnmarshalBodyJSON(body, &run)
+		return run, err
+	}
+
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *JobRunClient) Logs(
+	id v1.JobRunID,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	url := fmt.Sprintf(
 		"%v%v?%v",
 		c.apiServerURL,
-		fmt.Sprintf(v1rest.JobLogsPathFormat, c.systemID, id),
+		fmt.Sprintf(v1rest.JobRunLogsPathFormat, c.system, c.job, id),
 		logOptionsToQueryString(logOptions),
 	)
 

@@ -58,13 +58,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 
 	err := reflectutil.ValidateUnion(&req)
 	if err != nil {
-		switch err.(type) {
-		case *reflectutil.InvalidUnionNoFieldSetError, *reflectutil.InvalidUnionMultipleFieldSetError:
-			c.Status(http.StatusBadRequest)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -78,22 +72,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 	}
 
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -117,22 +96,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 
 	builds, err := api.backend.Systems().Builds(systemID).List()
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -158,22 +122,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 
 	build, err := api.backend.Systems().Builds(systemID).Get(buildID)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 
@@ -231,23 +180,7 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 
 	log, err := api.backend.Systems().Builds(systemID).Logs(buildID, path, sidecar, logOptions)
 	if err != nil {
-		v1err, ok := err.(*v1.Error)
-		if !ok {
-			handleInternalError(c, err)
-			return
-		}
-
-		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID,
-			v1.ErrorCodeInvalidPath, v1.ErrorCodeInvalidSidecar:
-			c.JSON(http.StatusNotFound, v1err)
-
-		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
-			c.JSON(http.StatusConflict, v1err)
-
-		default:
-			handleInternalError(c, err)
-		}
+		handleError(c, err)
 		return
 	}
 

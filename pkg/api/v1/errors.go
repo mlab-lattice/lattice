@@ -10,11 +10,13 @@ const (
 
 	ErrorCodeInvalidDeployID ErrorCode = "INVALID_DEPLOY_ID"
 
-	ErrorCodeInvalidJobID ErrorCode = "INVALID_JOB_ID"
+	ErrorCodeInvalidJobID    ErrorCode = "INVALID_JOB_ID"
+	ErrorCodeInvalidJobRunID ErrorCode = "INVALID_JOB_RUN_ID"
 
 	ErrorCodeInvalidSecret ErrorCode = "INVALID_SECRET"
 
-	ErrorCodeInvalidServiceID ErrorCode = "INVALID_SERVICE_ID"
+	ErrorCodeInvalidServiceID         ErrorCode = "INVALID_SERVICE_ID"
+	ErrorCodeInvalidServiceInstanceID ErrorCode = "INVALID_SERVICE_INSTANCE_ID"
 
 	ErrorCodeSystemAlreadyExists  ErrorCode = "SYSTEM_ALREADY_EXISTS"
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
@@ -25,10 +27,11 @@ const (
 
 	ErrorCodeInvalidTeardownID ErrorCode = "INVALID_TEARDOWN_ID"
 
-	ErrorCodeInvalidInstance ErrorCode = "INVALID_INSTANCE"
-	ErrorCodeInvalidPath     ErrorCode = "INVALID_PATH"
-	ErrorCodeInvalidSidecar  ErrorCode = "INVALID_SIDECAR"
-	ErrorCodeInvalidVersion  ErrorCode = "INVALID_VERSION"
+	ErrorCodeInvalidComponentType ErrorCode = "INVALID_COMPONENT_TYP"
+	ErrorCodeInvalidPath          ErrorCode = "INVALID_PATH"
+	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
+	ErrorCodeInvalidVersion       ErrorCode = "INVALID_VERSION"
+	ErrorCodeLogsUnavailable      ErrorCode = "LOGS_UNAVAILABLE"
 )
 
 type Error struct {
@@ -63,12 +66,20 @@ func NewInvalidJobIDError() *Error {
 	return NewError(ErrorCodeInvalidJobID)
 }
 
+func NewInvalidJobRunIDError() *Error {
+	return NewError(ErrorCodeInvalidJobRunID)
+}
+
 func NewInvalidSecretError() *Error {
 	return NewError(ErrorCodeInvalidSecret)
 }
 
 func NewInvalidServiceIDError() *Error {
 	return NewError(ErrorCodeInvalidServiceID)
+}
+
+func NewInvalidServiceInstanceIDError() *Error {
+	return NewError(ErrorCodeInvalidServiceInstanceID)
 }
 
 func NewSystemAlreadyExistsError() *Error {
@@ -87,24 +98,20 @@ func NewSystemPendingError() *Error {
 	return NewError(ErrorCodeSystemPending)
 }
 
-func NewInvalidSystemIDError() *Error {
-	return NewError(ErrorCodeInvalidSystemID)
-}
-
 func NewInvalidSystemOptionsError() *Error {
 	return NewError(ErrorCodeInvalidSystemOptions)
 }
 
-func NewInvalidVersionError() *Error {
-	return NewError(ErrorCodeInvalidVersion)
+func NewInvalidSystemIDError() *Error {
+	return NewError(ErrorCodeInvalidSystemID)
 }
 
 func NewInvalidTeardownIDError() *Error {
 	return NewError(ErrorCodeInvalidTeardownID)
 }
 
-func NewInvalidInstanceError() *Error {
-	return NewError(ErrorCodeInvalidInstance)
+func NewInvalidComponentTypeError() *Error {
+	return NewError(ErrorCodeInvalidComponentType)
 }
 
 func NewInvalidPathError() *Error {
@@ -113,4 +120,12 @@ func NewInvalidPathError() *Error {
 
 func NewInvalidSidecarError() *Error {
 	return NewError(ErrorCodeInvalidSidecar)
+}
+
+func NewInvalidVersionError() *Error {
+	return NewError(ErrorCodeInvalidVersion)
+}
+
+func NewLogsUnavailableError() *Error {
+	return NewError(ErrorCodeInvalidComponentType)
 }

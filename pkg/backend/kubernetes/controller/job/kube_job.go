@@ -15,10 +15,10 @@ import (
 )
 
 func (c *Controller) syncKubeJob(
-	jobRun *latticev1.JobRun,
+	job *latticev1.Job,
 	nodePool *latticev1.NodePool,
 ) (*batchv1.Job, error) {
-	kubeJob, err := c.kubeJob(jobRun)
+	kubeJob, err := c.kubeJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -27,26 +27,26 @@ func (c *Controller) syncKubeJob(
 		return kubeJob, nil
 	}
 
-	return c.createNewKubeJob(jobRun, nodePool)
+	return c.createNewKubeJob(job, nodePool)
 }
 
-func (c *Controller) kubeJob(jobRun *latticev1.JobRun) (*batchv1.Job, error) {
+func (c *Controller) kubeJob(job *latticev1.Job) (*batchv1.Job, error) {
 	// First check the cache for the deployment
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobRunIDLabelKey, selection.Equals, []string{jobRun.Name})
+	requirement, err := labels.NewRequirement(latticev1.JobIDLabelKey, selection.Equals, []string{job.Name})
 	if err != nil {
 		return nil, err
 	}
 	selector = selector.Add(*requirement)
 
-	cachedKubeJobs, err := c.kubeJobLister.Jobs(jobRun.Namespace).List(selector)
+	cachedKubeJobs, err := c.kubeJobLister.Jobs(job.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(cachedKubeJobs) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple cached kube jobs for %v", jobRun.Description(c.namespacePrefix))
+		return nil, fmt.Errorf("found multiple cached kube jobs for %v", job.Description(c.namespacePrefix))
 	}
 
 	if len(cachedKubeJobs) == 1 {
@@ -56,14 +56,14 @@ func (c *Controller) kubeJob(jobRun *latticev1.JobRun) (*batchv1.Job, error) {
 	// Didn't find the deployment in the cache. This likely means it hasn't been created, but since
 	// we can't orphan kubeJobs, we need to do a quorum read first to ensure that the deployment
 	// doesn't exist
-	kubeJobs, err := c.kubeClient.BatchV1().Jobs(jobRun.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	kubeJobs, err := c.kubeClient.BatchV1().Jobs(job.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
 
 	if len(kubeJobs.Items) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple kube jobs for %v", jobRun.Description(c.namespacePrefix))
+		return nil, fmt.Errorf("found multiple kube jobs for %v", job.Description(c.namespacePrefix))
 	}
 
 	if len(kubeJobs.Items) == 1 {
@@ -74,38 +74,38 @@ func (c *Controller) kubeJob(jobRun *latticev1.JobRun) (*batchv1.Job, error) {
 }
 
 func (c *Controller) createNewKubeJob(
-	jobRun *latticev1.JobRun,
+	job *latticev1.Job,
 	nodePool *latticev1.NodePool,
 ) (*batchv1.Job, error) {
-	kubeJob, err := c.newKubeJob(jobRun, nodePool)
+	kubeJob, err := c.newKubeJob(job, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := c.kubeClient.BatchV1().Jobs(jobRun.Namespace).Create(kubeJob)
+	result, err := c.kubeClient.BatchV1().Jobs(job.Namespace).Create(kubeJob)
 	if err != nil {
-		err := fmt.Errorf("error creating kube job for %v: %v", jobRun.Description(c.namespacePrefix), err)
+		err := fmt.Errorf("error creating kube job for %v: %v", job.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
 	return result, nil
 }
 
-func (c *Controller) newKubeJob(jobRun *latticev1.JobRun, nodePool *latticev1.NodePool) (*batchv1.Job, error) {
+func (c *Controller) newKubeJob(job *latticev1.Job, nodePool *latticev1.NodePool) (*batchv1.Job, error) {
 	// Need a consistent view of our config while generating the kube job spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
 
-	name := kubeJobName(jobRun)
+	name := kubeJobName(job)
 	kubeJobLabels := map[string]string{
-		latticev1.JobRunIDLabelKey: jobRun.Name,
+		latticev1.JobIDLabelKey: job.Name,
 	}
 
-	spec, err := c.kubeJobSpec(jobRun, name, kubeJobLabels, nodePool)
+	spec, err := c.kubeJobSpec(job, name, kubeJobLabels, nodePool)
 	if err != nil {
 		err := fmt.Errorf(
 			"error generating desired deployment spec for %v (on %v): %v",
-			jobRun.Description(c.namespacePrefix),
+			job.Description(c.namespacePrefix),
 			nodePool.Description(c.namespacePrefix),
 			err,
 		)
@@ -116,33 +116,33 @@ func (c *Controller) newKubeJob(jobRun *latticev1.JobRun, nodePool *latticev1.No
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Labels:          kubeJobLabels,
-			OwnerReferences: []metav1.OwnerReference{*controllerRef(jobRun)},
+			OwnerReferences: []metav1.OwnerReference{*controllerRef(job)},
 		},
 		Spec: spec,
 	}
 	return deployment, nil
 }
 
-func kubeJobName(jobRun *latticev1.JobRun) string {
+func kubeJobName(job *latticev1.Job) string {
 	// TODO(kevindrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
-	return fmt.Sprintf("lattice-job-run-%s", jobRun.Name)
+	return fmt.Sprintf("lattice-job-run-%s", job.Name)
 }
 
 func (c *Controller) kubeJobSpec(
-	jobRun *latticev1.JobRun,
+	job *latticev1.Job,
 	name string,
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (batchv1.JobSpec, error) {
-	podTemplateSpec, err := c.untransformedPodTemplateSpec(jobRun, name, deploymentLabels, nodePool)
+	podTemplateSpec, err := c.untransformedPodTemplateSpec(job, name, deploymentLabels, nodePool)
 	if err != nil {
 		return batchv1.JobSpec{}, err
 	}
 
 	one := int32(1)
 	numRetries := int32(0)
-	if jobRun.Spec.NumRetries != nil {
-		numRetries = *jobRun.Spec.NumRetries
+	if job.Spec.NumRetries != nil {
+		numRetries = *job.Spec.NumRetries
 	}
 
 	//return kubeJobSpec, nil
@@ -150,7 +150,7 @@ func (c *Controller) kubeJobSpec(
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	//podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(jobRun, podTemplateSpec)
+	//podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(job, podTemplateSpec)
 	//if err != nil {
 	//	return batchv1.DeploymentSpec{}, err
 	//}
@@ -166,22 +166,22 @@ func (c *Controller) kubeJobSpec(
 }
 
 func (c *Controller) untransformedPodTemplateSpec(
-	jobRun *latticev1.JobRun,
+	job *latticev1.Job,
 	name string,
-	jobRunLabels map[string]string,
+	jobLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (*corev1.PodTemplateSpec, error) {
-	path, err := jobRun.PathLabel()
+	path, err := job.PathLabel()
 	if err != nil {
-		err := fmt.Errorf("error getting path label for %v: %v", jobRun.Description(c.namespacePrefix), err)
+		err := fmt.Errorf("error getting path label for %v: %v", job.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
 	podAffinityTerm := corev1.PodAffinityTerm{
 		LabelSelector: &metav1.LabelSelector{
-			MatchLabels: jobRunLabels,
+			MatchLabels: jobLabels,
 		},
-		Namespaces: []string{jobRun.Namespace},
+		Namespaces: []string{job.Namespace},
 
 		// This basically tells the pod anti-affinity to only be applied to nodes who all
 		// have the same value for that label.
@@ -211,39 +211,39 @@ func (c *Controller) untransformedPodTemplateSpec(
 	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
 	// copy so we don't mutate the cache
-	jobRun = jobRun.DeepCopy()
-	if jobRun.Spec.Definition.Exec == nil {
-		jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
+	job = job.DeepCopy()
+	if job.Spec.Definition.Exec == nil {
+		job.Spec.Definition.Exec = &definitionv1.ContainerExec{
 			Environment: make(definitionv1.ContainerExecEnvironment),
 		}
 	}
 
 	// if a command was passed in, use it instead of the definition's command
-	if jobRun.Spec.Command != nil {
-		jobRun.Spec.Definition.Exec.Command = jobRun.Spec.Command
+	if job.Spec.Command != nil {
+		job.Spec.Definition.Exec.Command = job.Spec.Command
 	}
 
 	// if environment variables were passed in, set them
-	for k, v := range jobRun.Spec.Environment {
-		jobRun.Spec.Definition.Exec.Environment[k] = v
+	for k, v := range job.Spec.Environment {
+		job.Spec.Definition.Exec.Environment[k] = v
 	}
 
 	return latticev1.PodTemplateSpecForV1Workload(
-		&jobRun.Spec.Definition,
+		&job.Spec.Definition,
 		path,
 		c.latticeID,
 		c.internalDNSDomain,
 		c.namespacePrefix,
-		jobRun.Namespace,
-		jobRun.Name,
-		jobRunLabels,
-		jobRun.Spec.ContainerBuildArtifacts,
+		job.Namespace,
+		job.Name,
+		jobLabels,
+		job.Spec.ContainerBuildArtifacts,
 		corev1.RestartPolicyNever,
 		affinity,
 		tolerations,
 	)
 }
 
-func controllerRef(jobRun *latticev1.JobRun) *metav1.OwnerReference {
-	return metav1.NewControllerRef(jobRun, latticev1.JobRunKind)
+func controllerRef(job *latticev1.Job) *metav1.OwnerReference {
+	return metav1.NewControllerRef(job, latticev1.JobKind)
 }

@@ -191,7 +191,7 @@ func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidServiceID,
-			v1.ErrorCodeInvalidInstance, v1.ErrorCodeInvalidSidecar:
+			v1.ErrorCodeInvalidServiceInstanceID, v1.ErrorCodeInvalidSidecar:
 			c.JSON(http.StatusNotFound, v1err)
 
 		default:

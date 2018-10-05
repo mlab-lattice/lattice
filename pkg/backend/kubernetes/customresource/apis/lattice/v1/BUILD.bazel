@@ -11,7 +11,6 @@ go_library(
         "doc.go",
         "git_template.go",
         "job.go",
-        "job_run.go",
         "node_pool.go",
         "register.go",
         "secret.go",
