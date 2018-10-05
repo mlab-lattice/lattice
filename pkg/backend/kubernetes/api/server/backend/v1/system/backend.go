@@ -58,14 +58,14 @@ func (b *Backend) List() ([]v1.System, error) {
 		return nil, err
 	}
 
-	externalSystems := make([]v1.System, 0)
-	for _, system := range systems.Items {
-		externalSystem, err := b.transformSystem(&system)
+	externalSystems := make([]v1.System, len(systems.Items))
+	for i := 0; i < len(systems.Items); i++ {
+		externalSystem, err := b.transformSystem(&systems.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalSystems = append(externalSystems, *externalSystem)
+		externalSystems[i] = *externalSystem
 	}
 
 	return externalSystems, nil

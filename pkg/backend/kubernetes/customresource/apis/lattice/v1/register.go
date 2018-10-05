@@ -47,10 +47,6 @@ var (
 			ListType: &JobList{},
 		},
 		{
-			Type:     &JobRun{},
-			ListType: &JobRunList{},
-		},
-		{
 			Type:     &NodePool{},
 			ListType: &NodePoolList{},
 		},

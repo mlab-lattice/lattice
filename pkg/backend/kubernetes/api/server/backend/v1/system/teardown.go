@@ -18,16 +18,24 @@ type teardownBackend struct {
 	system  v1.SystemID
 }
 
+func (b *teardownBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
+}
+
 func (b *teardownBackend) Create() (*v1.Teardown, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	teardown := newTeardown()
+	teardown := &latticev1.Teardown{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewV4().String(),
+		},
+		Spec: latticev1.TeardownSpec{},
+	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).Create(teardown)
+	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(b.namespace()).Create(teardown)
 	if err != nil {
 		return nil, err
 	}
@@ -40,35 +48,25 @@ func (b *teardownBackend) Create() (*v1.Teardown, error) {
 	return &externalTeardown, nil
 }
 
-func newTeardown() *latticev1.Teardown {
-	return &latticev1.Teardown{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewV4().String(),
-		},
-		Spec: latticev1.TeardownSpec{},
-	}
-}
-
 func (b *teardownBackend) List() ([]v1.Teardown, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	teardowns, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
+	teardowns, err := b.backend.latticeClient.LatticeV1().Teardowns(b.namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var externalTeardowns []v1.Teardown
-	for _, teardown := range teardowns.Items {
-		externalTeardown, err := transformTeardown(&teardown)
+	externalTeardowns := make([]v1.Teardown, len(teardowns.Items))
+	for i := 0; i < len(teardowns.Items); i++ {
+		externalTeardown, err := transformTeardown(&teardowns.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalTeardowns = append(externalTeardowns, externalTeardown)
+		externalTeardowns[i] = externalTeardown
 	}
 
 	return externalTeardowns, nil
@@ -80,8 +78,7 @@ func (b *teardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).Get(string(id), metav1.GetOptions{})
+	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(b.namespace()).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidTeardownIDError()

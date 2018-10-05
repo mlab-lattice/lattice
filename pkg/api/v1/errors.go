@@ -13,6 +13,8 @@ const (
 	ErrorCodeInvalidJobID    ErrorCode = "INVALID_JOB_ID"
 	ErrorCodeInvalidJobRunID ErrorCode = "INVALID_JOB_RUN_ID"
 
+	ErrorCodeInvalidNodePoolPath ErrorCode = "INVALID_NODE_POOL_PATH"
+
 	ErrorCodeInvalidSecret ErrorCode = "INVALID_SECRET"
 
 	ErrorCodeInvalidServiceID         ErrorCode = "INVALID_SERVICE_ID"
@@ -68,6 +70,10 @@ func NewInvalidJobIDError() *Error {
 
 func NewInvalidJobRunIDError() *Error {
 	return NewError(ErrorCodeInvalidJobRunID)
+}
+
+func NewInvalidNodePoolPathError() *Error {
+	return NewError(ErrorCodeInvalidNodePoolPath)
 }
 
 func NewInvalidSecretError() *Error {

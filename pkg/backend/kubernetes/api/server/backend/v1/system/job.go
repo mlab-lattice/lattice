@@ -20,6 +20,10 @@ type jobBackend struct {
 	system  v1.SystemID
 }
 
+func (b *jobBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
+}
+
 func (b *jobBackend) Run(
 	path tree.Path,
 	command []string,
@@ -31,8 +35,7 @@ func (b *jobBackend) Run(
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	definition, artifacts, err := b.getJobInformation(path, namespace)
+	definition, artifacts, err := b.getJobInformation(path)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +59,12 @@ func (b *jobBackend) Run(
 		},
 	}
 
-	result, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).Create(job)
+	job, err = b.backend.latticeClient.LatticeV1().Jobs(b.namespace()).Create(job)
 	if err != nil {
-		return nil, fmt.Errorf("error trying to create job run: %v", err)
+		return nil, fmt.Errorf("error trying to create job: %v", err)
 	}
 
-	externalJob, err := b.transformJob(v1.JobID(result.Name), path, &result.Status, namespace)
+	externalJob, err := b.transformJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +78,19 @@ func (b *jobBackend) List() ([]v1.Job, error) {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{})
+	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(b.namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var externalJobs []v1.Job
-	for _, job := range jobs.Items {
-		path, err := job.PathLabel()
+	externalJobs := make([]v1.Job, len(jobs.Items))
+	for i := 0; i < len(jobs.Items); i++ {
+		externalJob, err := b.transformJob(&jobs.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalJob, err := b.transformJob(v1.JobID(job.Name), path, &job.Status, namespace)
-		if err != nil {
-			return nil, err
-		}
-
-		externalJobs = append(externalJobs, externalJob)
+		externalJobs[i] = externalJob
 	}
 
 	return externalJobs, nil
@@ -105,18 +102,12 @@ func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	jobRun, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).Get(string(id), metav1.GetOptions{})
+	job, err := b.backend.latticeClient.LatticeV1().Jobs(b.namespace()).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	path, err := jobRun.PathLabel()
-	if err != nil {
-		return nil, err
-	}
-
-	externalJob, err := b.transformJob(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
+	externalJob, err := b.transformJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +115,7 @@ func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 	return &externalJob, nil
 }
 
-func (b *jobBackend) Instances(id v1.JobID) backendv1.SystemJobRunBackend {
+func (b *jobBackend) Runs(id v1.JobID) backendv1.SystemJobRunBackend {
 	return &jobRunBackend{
 		backend: b.backend,
 		system:  b.system,
@@ -134,7 +125,6 @@ func (b *jobBackend) Instances(id v1.JobID) backendv1.SystemJobRunBackend {
 
 func (b *jobBackend) getJobInformation(
 	path tree.Path,
-	namespace string,
 ) (
 	*definitionv1.Job,
 	latticev1.WorkloadContainerBuildArtifacts,
@@ -173,29 +163,29 @@ func (b *jobBackend) getJobInformation(
 	return job, artifacts, nil
 }
 
-func (b *jobBackend) transformJob(
-	id v1.JobID,
-	path tree.Path,
-	status *latticev1.JobStatus,
-	namespace string,
-) (v1.Job, error) {
-	state, err := getJobState(status.State)
+func (b *jobBackend) transformJob(job *latticev1.Job) (v1.Job, error) {
+	path, err := job.PathLabel()
+	if err != nil {
+		return v1.Job{}, err
+	}
+
+	state, err := getJobState(job.Status.State)
 	if err != nil {
 		return v1.Job{}, err
 	}
 
 	var startTimestamp *time.Time
-	if status.StartTimestamp != nil {
-		startTimestamp = time.New(status.StartTimestamp.Time)
+	if job.Status.StartTimestamp != nil {
+		startTimestamp = time.New(job.Status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
-	if status.CompletionTimestamp != nil {
-		completionTimestamp = time.New(status.CompletionTimestamp.Time)
+	if job.Status.CompletionTimestamp != nil {
+		completionTimestamp = time.New(job.Status.CompletionTimestamp.Time)
 	}
 
-	job := v1.Job{
-		ID: id,
+	externalJob := v1.Job{
+		ID: v1.JobID(job.Name),
 
 		Path: path,
 
@@ -206,7 +196,7 @@ func (b *jobBackend) transformJob(
 			CompletionTimestamp: completionTimestamp,
 		},
 	}
-	return job, nil
+	return externalJob, nil
 }
 
 func getJobState(state latticev1.JobState) (v1.JobState, error) {

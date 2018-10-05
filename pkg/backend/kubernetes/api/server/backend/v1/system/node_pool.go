@@ -19,42 +19,58 @@ type nodePoolBackend struct {
 	system  v1.SystemID
 }
 
+func (b *nodePoolBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
+}
+
 func (b *nodePoolBackend) List() ([]v1.NodePool, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	nodePools, err := b.backend.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{})
+	nodePools, err := b.backend.latticeClient.LatticeV1().NodePools(b.namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var externalNodePools []v1.NodePool
-	for _, nodePool := range nodePools.Items {
-		path, err := b.getNodePoolPath(&nodePool)
+	externalNodePools := make([]v1.NodePool, len(nodePools.Items))
+	for i := 0; i < len(nodePools.Items); i++ {
+		externalNodePool, err := b.transformNodePool(&nodePools.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool)
-		if err != nil {
-			return nil, err
-		}
-
-		externalNodePools = append(externalNodePools, externalNodePool)
+		externalNodePools[i] = externalNodePool
 	}
 
 	return externalNodePools, nil
 }
 
-func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) {
+func (b *nodePoolBackend) Get(subcomponent tree.PathSubcomponent) (*v1.NodePool, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
+	nodePool, ok, err := b.getNodePool(subcomponent)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, v1.NewInvalidNodePoolPathError()
+	}
+
+	externalNodePool, err := b.transformNodePool(nodePool)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalNodePool, nil
+}
+
+func (b *nodePoolBackend) getNodePool(path tree.PathSubcomponent) (*latticev1.NodePool, bool, error) {
 	namespace := b.backend.systemNamespace(b.system)
 	var selector labels.Selector
 	if path.Subcomponent() == "" {
@@ -65,21 +81,21 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 			[]string{path.Path().ToDomain()},
 		)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		selector = selector.Add(*requirement)
 		services, err := b.backend.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		if len(services.Items) > 1 {
-			return nil, fmt.Errorf("found multiple services for path %v", path.Path().String())
+			return nil, false, fmt.Errorf("found multiple services for path %v", path.Path().String())
 		}
 
 		if len(services.Items) == 0 {
-			return nil, nil
+			return nil, false, nil
 		}
 
 		service := services.Items[0]
@@ -91,7 +107,7 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 			[]string{service.Name},
 		)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		selector = selector.Add(*requirement)
@@ -102,7 +118,7 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 			[]string{path.Path().ToDomain()},
 		)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		selector = selector.Add(*requirement)
@@ -113,7 +129,7 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 			[]string{path.Subcomponent()},
 		)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		selector = selector.Add(*requirement)
@@ -121,24 +137,18 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 
 	nodePools, err := b.backend.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if len(nodePools.Items) > 1 {
-		return nil, fmt.Errorf("found multiple node pools for selector %v", selector.String())
+		return nil, false, fmt.Errorf("found multiple node pools for selector %v", selector.String())
 	}
 
 	if len(nodePools.Items) == 0 {
-		return nil, nil
+		return nil, false, nil
 	}
 
-	nodePool := &nodePools.Items[0]
-	externalNodePool, err := b.transformNodePool(nodePool.Name, path, nodePool)
-	if err != nil {
-		return nil, err
-	}
-
-	return &externalNodePool, nil
+	return &nodePools.Items[0], true, nil
 }
 
 func (b *nodePoolBackend) getNodePoolPath(nodePool *latticev1.NodePool) (tree.PathSubcomponent, error) {
@@ -178,7 +188,12 @@ func (b *nodePoolBackend) getNodePoolPath(nodePool *latticev1.NodePool) (tree.Pa
 	return "", fmt.Errorf("%v did not contain service id or system shared path labels", nodePool.Description(b.backend.namespacePrefix))
 }
 
-func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponent, nodePool *latticev1.NodePool) (v1.NodePool, error) {
+func (b *nodePoolBackend) transformNodePool(nodePool *latticev1.NodePool) (v1.NodePool, error) {
+	path, err := b.getNodePoolPath(nodePool)
+	if err != nil {
+		return v1.NodePool{}, err
+	}
+
 	state, err := getNodePoolState(nodePool.Status.State)
 	if err != nil {
 		return v1.NodePool{}, err
@@ -197,7 +212,7 @@ func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponen
 	if ok {
 		epoch, ok := nodePool.Status.Epochs.Epoch(currentEpoch)
 		if !ok {
-			return v1.NodePool{}, fmt.Errorf("node pool %v had current epoch %v but does not have its status", id, currentEpoch)
+			return v1.NodePool{}, fmt.Errorf("node pool %v had current epoch %v but does not have its status", nodePool.Name, currentEpoch)
 		}
 
 		instanceType = epoch.Spec.InstanceType
@@ -209,7 +224,7 @@ func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponen
 	}
 
 	externalNodePool := v1.NodePool{
-		ID:   id,
+		ID:   v1.NodePoolID(nodePool.Name),
 		Path: path,
 
 		InstanceType: nodePool.Spec.InstanceType,

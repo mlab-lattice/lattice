@@ -18,29 +18,25 @@ type secretBackend struct {
 	system  v1.SystemID
 }
 
+func (b *secretBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
+}
+
 func (b *secretBackend) List() ([]v1.Secret, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	// There are secrets in the namespace that are not secrets set for lattice.
-	// Don't expose those in ListSystemSecrets
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.SecretPathLabelKey, selection.Exists, nil)
-	if err != nil {
-		return nil, err
-	}
-	selector = selector.Add(*requirement)
-
-	namespace := b.backend.systemNamespace(b.system)
-	secrets, err := b.backend.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	secrets, err := b.secrets()
 	if err != nil {
 		return nil, err
 	}
 
-	externalSecrets := make([]v1.Secret, 0)
-	for _, secret := range secrets.Items {
+	externalSecrets := make([]v1.Secret, len(secrets.Items))
+	for i := 0; i < len(secrets.Items); i++ {
+		secret := secrets.Items[i]
+
 		path, err := tree.NewPathFromDomain(secret.Labels[latticev1.SecretPathLabelKey])
 		if err != nil {
 			return nil, err
@@ -68,19 +64,13 @@ func (b *secretBackend) Get(subcomponent tree.PathSubcomponent) (*v1.Secret, err
 		return nil, err
 	}
 
-	kubeSecretName, err := kubeSecretName(subcomponent.Path())
+	secret, ok, err := b.secret(subcomponent)
 	if err != nil {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidSecretError()
-		}
-
-		return nil, err
+	if !ok {
+		return nil, v1.NewInvalidSecretError()
 	}
 
 	value, ok := secret.Data[subcomponent.Subcomponent()]
@@ -101,25 +91,19 @@ func (b *secretBackend) Set(subcomponent tree.PathSubcomponent, value string) er
 		return err
 	}
 
-	kubeSecretName, err := kubeSecretName(subcomponent.Path())
+	secret, ok, err := b.secret(subcomponent)
 	if err != nil {
 		return err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return b.createSecret(subcomponent, value)
-		}
-
-		return err
+	if !ok {
+		return b.createSecret(subcomponent, value)
 	}
 
 	secret.StringData = map[string]string{
 		subcomponent.Subcomponent(): value,
 	}
-	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Update(secret)
+	_, err = b.backend.kubeClient.CoreV1().Secrets(b.namespace()).Update(secret)
 	if err == nil {
 		return nil
 	}
@@ -131,6 +115,80 @@ func (b *secretBackend) Set(subcomponent tree.PathSubcomponent, value string) er
 	}
 
 	return err
+}
+
+func (b *secretBackend) Unset(subcomponent tree.PathSubcomponent) error {
+	// ensure the system exists
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
+		return err
+	}
+
+	secret, ok, err := b.secret(subcomponent)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return nil
+	}
+
+	delete(secret.Data, subcomponent.Subcomponent())
+	if len(secret.Data) == 0 {
+		err = b.backend.kubeClient.CoreV1().Secrets(b.namespace()).Delete(secret.Name, nil)
+		if err != nil {
+			return nil
+		}
+
+		if errors.IsConflict(err) {
+			return v1.NewConflictError()
+		}
+
+		return err
+	}
+
+	_, err = b.backend.kubeClient.CoreV1().Secrets(b.namespace()).Update(secret)
+	if err == nil {
+		return nil
+	}
+
+	if errors.IsConflict(err) {
+		return v1.NewConflictError()
+	}
+
+	return err
+}
+
+func (b *secretBackend) secrets() (*corev1.SecretList, error) {
+	// There are secrets in the namespace that are not secrets set for lattice.
+	// Don't expose those in ListSystemSecrets
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.SecretPathLabelKey, selection.Exists, nil)
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	namespace := b.backend.systemNamespace(b.system)
+	return b.backend.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+}
+
+func (b *secretBackend) secret(subcomponent tree.PathSubcomponent) (*corev1.Secret, bool, error) {
+	kubeSecretName, err := kubeSecretName(subcomponent.Path())
+	if err != nil {
+		return nil, false, err
+	}
+
+	namespace := b.backend.systemNamespace(b.system)
+	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	return secret, true, nil
 }
 
 func (b *secretBackend) createSecret(subcomponent tree.PathSubcomponent, value string) error {
@@ -153,54 +211,6 @@ func (b *secretBackend) createSecret(subcomponent tree.PathSubcomponent, value s
 	}
 
 	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Create(secret)
-	return err
-}
-
-func (b *secretBackend) Unset(subcomponent tree.PathSubcomponent) error {
-	// ensure the system exists
-	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
-		return err
-	}
-
-	kubeSecretName, err := kubeSecretName(subcomponent.Path())
-	if err != nil {
-		return err
-	}
-
-	namespace := b.backend.systemNamespace(b.system)
-	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
-	if err != nil {
-		// If we can't find the secret, then it is unset
-		if errors.IsNotFound(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	delete(secret.Data, subcomponent.Subcomponent())
-	if len(secret.Data) == 0 {
-		err = b.backend.kubeClient.CoreV1().Secrets(namespace).Delete(secret.Name, nil)
-		if err != nil {
-			return nil
-		}
-
-		if errors.IsConflict(err) {
-			return v1.NewConflictError()
-		}
-
-		return err
-	}
-
-	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Update(secret)
-	if err == nil {
-		return nil
-	}
-
-	if errors.IsConflict(err) {
-		return v1.NewConflictError()
-	}
-
 	return err
 }
 

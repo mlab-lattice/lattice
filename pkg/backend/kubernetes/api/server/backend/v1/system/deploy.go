@@ -19,6 +19,10 @@ type deployBackend struct {
 	system  v1.SystemID
 }
 
+func (b *deployBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
+}
+
 func (b *deployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	// this ensures the system and build exist
 	_, err := b.backend.Builds(b.system).Get(id)
@@ -48,10 +52,18 @@ func (b *deployBackend) CreateFromVersion(version v1.Version) (*v1.Deploy, error
 }
 
 func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version *v1.Version) (*v1.Deploy, error) {
-	deploy := newDeploy(build, path, version)
+	deploy := &latticev1.Deploy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewV4().String(),
+		},
+		Spec: latticev1.DeploySpec{
+			Build:   build,
+			Path:    path,
+			Version: version,
+		},
+	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	result, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
+	result, err := b.backend.latticeClient.LatticeV1().Deploys(b.namespace()).Create(deploy)
 	if err != nil {
 		return nil, err
 	}
@@ -64,40 +76,24 @@ func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version
 	return &externalDeploy, nil
 }
 
-func newDeploy(build *v1.BuildID, path *tree.Path, version *v1.Version) *latticev1.Deploy {
-	return &latticev1.Deploy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewV4().String(),
-		},
-		Spec: latticev1.DeploySpec{
-			Build:   build,
-			Path:    path,
-			Version: version,
-		},
-	}
-}
-
 func (b *deployBackend) List() ([]v1.Deploy, error) {
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	deploys, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).List(metav1.ListOptions{})
+	deploys, err := b.backend.latticeClient.LatticeV1().Deploys(b.namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	// need to actually allocate the slice here so we return a slice instead of nil
-	// if deploys.Items is empty
-	externalDeploys := make([]v1.Deploy, 0)
-	for _, deploy := range deploys.Items {
-		externalDeploy, err := transformDeploy(&deploy)
+	externalDeploys := make([]v1.Deploy, len(deploys.Items))
+	for i := 0; i < len(deploys.Items); i++ {
+		externalDeploy, err := transformDeploy(&deploys.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalDeploys = append(externalDeploys, externalDeploy)
+		externalDeploys[i] = externalDeploy
 	}
 
 	return externalDeploys, nil

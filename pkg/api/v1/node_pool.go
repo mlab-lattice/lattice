@@ -6,7 +6,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
-type NodePoolState string
+type (
+	NodePoolID    string
+	NodePoolState string
+)
 
 const (
 	NodePoolStatePending  = "pending"
@@ -19,7 +22,7 @@ const (
 )
 
 type NodePool struct {
-	ID   string                `json:"id"`
+	ID   NodePoolID            `json:"id"`
 	Path tree.PathSubcomponent `json:"path"`
 
 	InstanceType string `json:"instanceType"`

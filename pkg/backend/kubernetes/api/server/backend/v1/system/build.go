@@ -7,7 +7,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	time "github.com/mlab-lattice/lattice/pkg/util/time"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +22,10 @@ import (
 type buildBackend struct {
 	backend *Backend
 	system  v1.SystemID
+}
+
+func (b *buildBackend) namespace() string {
+	return b.backend.systemNamespace(b.system)
 }
 
 func (b *buildBackend) CreateFromVersion(version v1.Version) (*v1.Build, error) {
@@ -36,13 +42,18 @@ func (b *buildBackend) createBuild(version *v1.Version, path *tree.Path) (*v1.Bu
 		return nil, err
 	}
 
-	build, err := newBuild(version, path)
-	if err != nil {
-		return nil, err
+	build := &latticev1.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   uuid.NewV4().String(),
+			Labels: map[string]string{},
+		},
+		Spec: latticev1.BuildSpec{
+			Version: version,
+			Path:    path,
+		},
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	build, err = b.backend.latticeClient.LatticeV1().Builds(namespace).Create(build)
+	build, err := b.backend.latticeClient.LatticeV1().Builds(b.namespace()).Create(build)
 	if err != nil {
 		return nil, err
 	}
@@ -55,42 +66,24 @@ func (b *buildBackend) createBuild(version *v1.Version, path *tree.Path) (*v1.Bu
 	return &externalBuild, nil
 }
 
-func newBuild(version *v1.Version, path *tree.Path) (*latticev1.Build, error) {
-	build := &latticev1.Build{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   uuid.NewV4().String(),
-			Labels: map[string]string{},
-		},
-		Spec: latticev1.BuildSpec{
-			Version: version,
-			Path:    path,
-		},
-	}
-
-	return build, nil
-}
-
 func (b *buildBackend) List() ([]v1.Build, error) {
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	builds, err := b.backend.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
+	builds, err := b.backend.latticeClient.LatticeV1().Builds(b.namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	// need to actually allocate the slice here so we return a slice instead of nil
-	// if builds.Items is empty
-	externalBuilds := make([]v1.Build, 0)
-	for _, build := range builds.Items {
-		externalBuild, err := b.transformBuild(&build)
+	externalBuilds := make([]v1.Build, len(builds.Items))
+	for i := 0; i < len(builds.Items); i++ {
+		externalBuild, err := b.transformBuild(&builds.Items[i])
 		if err != nil {
 			return nil, err
 		}
 
-		externalBuilds = append(externalBuilds, externalBuild)
+		externalBuilds[i] = externalBuild
 	}
 
 	return externalBuilds, nil
@@ -102,8 +95,7 @@ func (b *buildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	build, err := b.backend.latticeClient.LatticeV1().Builds(namespace).Get(string(id), metav1.GetOptions{})
+	build, err := b.backend.latticeClient.LatticeV1().Builds(b.namespace()).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidBuildIDError()
@@ -131,8 +123,7 @@ func (b *buildBackend) Logs(
 		return nil, err
 	}
 
-	namespace := b.backend.systemNamespace(b.system)
-	build, err := b.backend.latticeClient.LatticeV1().Builds(namespace).Get(string(id), metav1.GetOptions{})
+	build, err := b.backend.latticeClient.LatticeV1().Builds(b.namespace()).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidBuildIDError()
@@ -158,33 +149,50 @@ func (b *buildBackend) Logs(
 		}
 	}
 
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{string(containerBuildID)})
+	pod, ok, err := b.buildPod(containerBuildID)
 	if err != nil {
-		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, containerBuildID, err)
+		return nil, err
+	}
+
+	if !ok {
+		return nil, v1.NewLogsUnavailableError()
+	}
+
+	podLogOptions, err := toPodLogOptions(logOptions, "")
+	if err != nil {
+		return nil, err
+	}
+
+	req := b.backend.kubeClient.CoreV1().Pods(b.namespace()).GetLogs(pod.Name, podLogOptions)
+	return req.Stream()
+}
+
+func (b *buildBackend) buildPod(id v1.ContainerBuildID) (*corev1.Pod, bool, error) {
+	namespace := b.namespace()
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{string(id)})
+	if err != nil {
+		err := fmt.Errorf("error creating requirement for container build %v/%v job lookup: %v", namespace, id, err)
+		return nil, false, err
 	}
 
 	selector = selector.Add(*requirement)
-	pods, err := b.backend.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	pods, err := b.backend.kubeClient.CoreV1().Pods(b.namespace()).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if len(pods.Items) > 1 {
-		return nil, fmt.Errorf("found multiple pods for %v/%v", namespace, containerBuildID)
+		err := fmt.Errorf("found multiple pods for container build %v/%v job lookup: %v", namespace, id, err)
+		return nil, false, err
 	}
 
 	if len(pods.Items) == 0 {
-		return nil, nil
+		return nil, false, nil
 	}
 
-	pod := pods.Items[0]
-	podLogOptions, err := toPodLogOptions(logOptions)
-	if err != nil {
-		return nil, err
-	}
-	req := b.backend.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
-	return req.Stream()
+	return &pods.Items[0], true, nil
 }
 
 func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) {

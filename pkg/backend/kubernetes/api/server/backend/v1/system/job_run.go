@@ -109,7 +109,7 @@ func (b *jobRunBackend) Logs(
 	return req.Stream()
 }
 
-// findServicePod finds service pod by instance id or service's single pod if id was not specified
+// pod finds service pod by instance id or service's single pod if id was not specified
 func (b *jobRunBackend) getJobPods() ([]corev1.Pod, error) {
 	namespace := b.backend.systemNamespace(b.system)
 
