@@ -26,6 +26,9 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
+
+	metricsclientset "k8s.io/metrics/pkg/client/clientset_generated/clientset"
+
 )
 
 const (
@@ -102,9 +105,15 @@ func Command() *cli.RootCommand {
 					return err
 				}
 
+				metricsClient, err := metricsclientset.NewForConfig(config)
+				if err != nil {
+					return err
+				}
+
+
 				setupSSH()
 
-				backend := backend.NewKubernetesBackend(namespacePrefix, kubeClient, latticeClient)
+				backend := backend.NewKubernetesBackend(namespacePrefix, kubeClient, latticeClient, metricsClient )
 
 				latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 				kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))

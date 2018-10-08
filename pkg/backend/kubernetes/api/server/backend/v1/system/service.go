@@ -324,10 +324,11 @@ func (b *serviceBackend) getServiceInstanceMetrics(id v1.ServiceID, namespace st
 	instances := make([]string, len(pods.Items))
 
 	for i, podItem := range pods.Items {
-		instances[i] = toServiceInstanceShortID(id, podItem.Name)
+		instances[i] = podItem.Name
+		//instances[i] = toServiceInstanceShortID(id, podItem.Name)
 	}
 
-	return []string{"8888", "777", "66"}, nil
+	return instances, nil
 }
 
 func toServiceInstanceShortID(serviceID v1.ServiceID, podName string) string {

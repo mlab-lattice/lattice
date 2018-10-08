@@ -2,7 +2,6 @@ package system
 
 import (
 	"fmt"
-
 	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -13,22 +12,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/metrics/pkg/apis/metrics"
+	metricsclientset "k8s.io/metrics/pkg/client/clientset_generated/clientset"
 )
 
 func NewBackend(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
+	metricsClient metricsclientset.Interface,
 ) *Backend {
-	return &Backend{namespacePrefix, kubeClient, latticeClient, metrics.PodMetricsList{} }
+	return &Backend{namespacePrefix, kubeClient, latticeClient, metricsClient }
 }
 
 type Backend struct {
 	namespacePrefix string
 	kubeClient      kubeclientset.Interface
 	latticeClient   latticeclientset.Interface
-	metricsClient	metrics.PodMetricsList
+	metricsClient 	metricsclientset.Interface
 }
 
 func (b *Backend) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {

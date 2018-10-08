@@ -6,6 +6,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
+	metricsclientset "k8s.io/metrics/pkg/client/clientset_generated/clientset"
 )
 
 type Backend struct {
@@ -16,9 +17,10 @@ func NewBackend(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
+	metricsClient metricsclientset.Interface,
 ) *Backend {
 	return &Backend{
-		systems: system.NewBackend(namespacePrefix, kubeClient, latticeClient),
+		systems: system.NewBackend(namespacePrefix, kubeClient, latticeClient, metricsClient),
 	}
 }
 
