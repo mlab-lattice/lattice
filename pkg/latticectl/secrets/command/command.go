@@ -1,45 +1,45 @@
-package deploys
+package command
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 const (
-	deployFlagName = "deploy"
+	secretFlagName = "secret"
 )
 
-// DeployCommandContext contains the information available to any LatticeCommand.
-type DeployCommandContext struct {
+// SecretCommandContext contains the information available to any SecretCommand.
+type SecretCommandContext struct {
 	*command.SystemCommandContext
-	Deploy v1.DeployID
+	Secret tree.PathSubcomponent
 }
 
-// DeployCommand is a Command that acts on a specific build in a specific system.
-// More practically, it is a valid SystemCommand and also validates that a build was specified.
-type DeployCommand struct {
+// SecretCommand is a SecretCommand that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a secret was specified.
+type SecretCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
 	Flags                  cli.Flags
-	Run                    func(ctx *DeployCommandContext, args []string, flags cli.Flags) error
+	Run                    func(ctx *SecretCommandContext, args []string, flags cli.Flags) error
 	MutuallyExclusiveFlags [][]string
 	RequiredFlagSet        [][]string
 	Subcommands            map[string]*cli.Command
 }
 
-// Command returns a *cli.Command for the DeployCommand.
-func (c *DeployCommand) Command() *cli.Command {
+// Command returns a *cli.Command for the SecretCommand.
+func (c *SecretCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}
 
-	var deploy string
-	c.Flags[deployFlagName] = &flags.String{
+	var secret tree.PathSubcomponent
+	c.Flags[secretFlagName] = &flags.PathSubcomponent{
 		Required: true,
-		Target:   &deploy,
+		Target:   &secret,
 	}
 
 	cmd := &command.SystemCommand{
@@ -49,11 +49,11 @@ func (c *DeployCommand) Command() *cli.Command {
 		MutuallyExclusiveFlags: c.MutuallyExclusiveFlags,
 		RequiredFlagSet:        c.RequiredFlagSet,
 		Run: func(ctx *command.SystemCommandContext, args []string, f cli.Flags) error {
-			deployCtx := &DeployCommandContext{
+			secretCtx := &SecretCommandContext{
 				SystemCommandContext: ctx,
-				Deploy:               v1.DeployID(deploy),
+				Secret:               secret,
 			}
-			return c.Run(deployCtx, args, f)
+			return c.Run(secretCtx, args, f)
 		},
 		Subcommands: c.Subcommands,
 	}

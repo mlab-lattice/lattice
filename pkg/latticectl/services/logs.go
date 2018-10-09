@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	servicecommand "github.com/mlab-lattice/lattice/pkg/latticectl/services/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
@@ -27,7 +28,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := ServiceCommand{
+	cmd := servicecommand.ServiceCommand{
 		Flags: map[string]cli.Flag{
 			"follow":                &flags.Bool{Target: &follow},
 			instanceFlag:            &flags.String{Target: &instance},
@@ -37,7 +38,7 @@ func Logs() *cli.Command {
 			"since":                 &flags.String{Target: &since},
 			"tail":                  &flags.Int{Target: &tail},
 		},
-		Run: func(ctx *ServiceCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *servicecommand.ServiceCommandContext, args []string, flags cli.Flags) error {
 			var instancePtr *string
 			if flags[instanceFlag].Set() {
 				instancePtr = &instance

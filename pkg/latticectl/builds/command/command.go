@@ -1,4 +1,4 @@
-package teardowns
+package command
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -8,38 +8,38 @@ import (
 )
 
 const (
-	teardownFlagName = "teardown"
+	buildFlagName = "build"
 )
 
-// TeardownCommandContext contains the information available to any TeardownCommand.
-type TeardownCommandContext struct {
+// BuildCommandContext contains the information available to any BuildCommand.
+type BuildCommandContext struct {
 	*command.SystemCommandContext
-	Teardown v1.TeardownID
+	Build v1.BuildID
 }
 
-// TeardownCommand is a Command that acts on a specific teardown in a specific system.
-// More practically, it is a valid SystemCommand and also validates that a teardown was specified.
-type TeardownCommand struct {
+// BuildCommand is a Command that acts on a specific build in a specific system.
+// More practically, it is a valid SystemCommand and also validates that a build was specified.
+type BuildCommand struct {
 	Name                   string
 	Short                  string
 	Args                   cli.Args
 	Flags                  cli.Flags
-	Run                    func(ctx *TeardownCommandContext, args []string, flags cli.Flags) error
+	Run                    func(ctx *BuildCommandContext, args []string, flags cli.Flags) error
 	MutuallyExclusiveFlags [][]string
 	RequiredFlagSet        [][]string
 	Subcommands            map[string]*cli.Command
 }
 
-// Command returns a *cli.Command for the TeardownCommand.
-func (c *TeardownCommand) Command() *cli.Command {
+// Command returns a *cli.Command for the BuildCommand.
+func (c *BuildCommand) Command() *cli.Command {
 	if c.Flags == nil {
 		c.Flags = make(cli.Flags)
 	}
 
-	var teardown string
-	c.Flags[teardownFlagName] = &flags.String{
+	var build string
+	c.Flags[buildFlagName] = &flags.String{
 		Required: true,
-		Target:   &teardown,
+		Target:   &build,
 	}
 
 	cmd := &command.SystemCommand{
@@ -49,11 +49,11 @@ func (c *TeardownCommand) Command() *cli.Command {
 		MutuallyExclusiveFlags: c.MutuallyExclusiveFlags,
 		RequiredFlagSet:        c.RequiredFlagSet,
 		Run: func(ctx *command.SystemCommandContext, args []string, f cli.Flags) error {
-			teardownCtx := &TeardownCommandContext{
+			buildCtx := &BuildCommandContext{
 				SystemCommandContext: ctx,
-				Teardown:             v1.TeardownID(teardown),
+				Build:                v1.BuildID(build),
 			}
-			return c.Run(teardownCtx, args, f)
+			return c.Run(buildCtx, args, f)
 		},
 		Subcommands: c.Subcommands,
 	}

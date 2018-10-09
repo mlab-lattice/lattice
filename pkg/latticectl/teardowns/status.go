@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	teardowncommand "github.com/mlab-lattice/lattice/pkg/latticectl/teardowns/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
@@ -21,7 +22,7 @@ func Status() *cli.Command {
 		watch  bool
 	)
 
-	cmd := TeardownCommand{
+	cmd := teardowncommand.TeardownCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -33,7 +34,7 @@ func Status() *cli.Command {
 			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
-		Run: func(ctx *TeardownCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *teardowncommand.TeardownCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {

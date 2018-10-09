@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	buildcommand "github.com/mlab-lattice/lattice/pkg/latticectl/builds/command"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
@@ -24,7 +25,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := BuildCommand{
+	cmd := buildcommand.BuildCommand{
 		Flags: map[string]cli.Flag{
 			"follow": &flags.Bool{Target: &follow},
 			"path": &flags.Path{
@@ -37,7 +38,7 @@ func Logs() *cli.Command {
 			"since":                 &flags.String{Target: &since},
 			"tail":                  &flags.Int{Target: &tail},
 		},
-		Run: func(ctx *BuildCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *buildcommand.BuildCommandContext, args []string, flags cli.Flags) error {
 			var sidecarPtr *string
 			if flags[command.SidecarFlagName].Set() {
 				sidecarPtr = &sidecar

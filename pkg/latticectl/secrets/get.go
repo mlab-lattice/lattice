@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	secretcommand "github.com/mlab-lattice/lattice/pkg/latticectl/secrets/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
@@ -20,7 +21,7 @@ func Get() *cli.Command {
 		output string
 	)
 
-	cmd := SecretCommand{
+	cmd := secretcommand.SecretCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -31,7 +32,7 @@ func Get() *cli.Command {
 				printer.FormatTable,
 			),
 		},
-		Run: func(ctx *SecretCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *secretcommand.SecretCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 			return GetSecret(ctx.Client, ctx.System, ctx.Secret, os.Stdout, format)
 		},

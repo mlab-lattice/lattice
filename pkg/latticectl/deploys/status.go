@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	deploycommand "github.com/mlab-lattice/lattice/pkg/latticectl/deploys/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
-	"time"
 )
 
 // Status returns a *cli.Command to retrieve the status of a deploy.
@@ -21,7 +22,7 @@ func Status() *cli.Command {
 		watch  bool
 	)
 
-	cmd := DeployCommand{
+	cmd := deploycommand.DeployCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -33,7 +34,7 @@ func Status() *cli.Command {
 			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
-		Run: func(ctx *DeployCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *deploycommand.DeployCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {

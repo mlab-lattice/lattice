@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	secretcommand "github.com/mlab-lattice/lattice/pkg/latticectl/secrets/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
@@ -28,14 +29,14 @@ func Set() *cli.Command {
 		value string
 	)
 
-	cmd := SecretCommand{
+	cmd := secretcommand.SecretCommand{
 		Flags: map[string]cli.Flag{
 			setFileFlag:  &flags.String{Target: &file},
 			setValueFlag: &flags.String{Target: &value},
 		},
 		MutuallyExclusiveFlags: [][]string{setContentFlags},
 		RequiredFlagSet:        [][]string{setContentFlags},
-		Run: func(ctx *SecretCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *secretcommand.SecretCommandContext, args []string, flags cli.Flags) error {
 			if flags[setFileFlag].Set() {
 				var data []byte
 				var err error

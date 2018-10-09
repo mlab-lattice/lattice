@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	servicecommand "github.com/mlab-lattice/lattice/pkg/latticectl/services/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
-	"strconv"
 )
 
 // Status returns a *cli.Command to retrieve the status of a service.
@@ -22,7 +23,7 @@ func Status() *cli.Command {
 		watch  bool
 	)
 
-	cmd := ServiceCommand{
+	cmd := servicecommand.ServiceCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -34,7 +35,7 @@ func Status() *cli.Command {
 			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
-		Run: func(ctx *ServiceCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *servicecommand.ServiceCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {

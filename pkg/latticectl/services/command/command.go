@@ -1,4 +1,4 @@
-package services
+package command
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
