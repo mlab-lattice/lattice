@@ -29,7 +29,7 @@ const (
 
 	ErrorCodeInvalidTeardownID ErrorCode = "INVALID_TEARDOWN_ID"
 
-	ErrorCodeInvalidComponentType ErrorCode = "INVALID_COMPONENT_TYP"
+	ErrorCodeInvalidComponentType ErrorCode = "INVALID_COMPONENT_TYPE"
 	ErrorCodeInvalidPath          ErrorCode = "INVALID_PATH"
 	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
 	ErrorCodeInvalidVersion       ErrorCode = "INVALID_VERSION"

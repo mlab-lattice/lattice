@@ -125,7 +125,7 @@ func (c *Controller) newKubeJob(job *latticev1.Job, nodePool *latticev1.NodePool
 
 func kubeJobName(job *latticev1.Job) string {
 	// TODO(kevindrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
-	return fmt.Sprintf("lattice-job-run-%s", job.Name)
+	return fmt.Sprintf("lattice-job-%s", job.Name)
 }
 
 func (c *Controller) kubeJobSpec(

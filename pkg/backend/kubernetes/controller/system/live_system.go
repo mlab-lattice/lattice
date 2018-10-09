@@ -10,11 +10,6 @@ func (c *Controller) syncLiveSystem(system *latticev1.System) error {
 		return err
 	}
 
-	err = c.syncSystemJobs(system)
-	if err != nil {
-		return err
-	}
-
 	nodePools, err := c.syncSystemNodePools(system)
 	if err != nil {
 		return err

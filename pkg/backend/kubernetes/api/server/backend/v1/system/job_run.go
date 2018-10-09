@@ -169,8 +169,12 @@ func jobRunStatus(pod *corev1.Pod) (v1.JobRunStatus, error) {
 		startTimestamp = time.New(pod.Status.StartTime.Time)
 	}
 
-	var completionTimestamp *time.Time
-	var state v1.JobRunState
+	var (
+		state               v1.JobRunState
+		completionTimestamp *time.Time
+		exitCode            *int32
+	)
+
 	switch pod.Status.Phase {
 	case corev1.PodPending:
 		state = v1.JobRunStatePending
@@ -181,27 +185,49 @@ func jobRunStatus(pod *corev1.Pod) (v1.JobRunStatus, error) {
 	case corev1.PodSucceeded:
 		state = v1.JobRunStateSucceeded
 
+		var ok bool
+		var err error
+		completionTimestamp, exitCode, ok, err = jobRunCompletionInfo(pod)
+		if err != nil {
+			return v1.JobRunStatus{}, err
+		}
+
+		if !ok {
+			err := fmt.Errorf(
+				"pod %v/%v is in state Failed but does not have terminated state info",
+				pod.Namespace,
+				pod.Name,
+			)
+			return v1.JobRunStatus{}, err
+		}
+
 	case corev1.PodFailed:
 		state = v1.JobRunStateFailed
 
+		var ok bool
 		var err error
-		completionTimestamp, err = jobRunCompletionTimestamp(pod)
+		completionTimestamp, exitCode, ok, err = jobRunCompletionInfo(pod)
 		if err != nil {
+			return v1.JobRunStatus{}, err
+		}
+
+		if !ok {
+			err := fmt.Errorf(
+				"pod %v/%v is in state Failed but does not have terminated state info",
+				pod.Namespace,
+				pod.Name,
+			)
 			return v1.JobRunStatus{}, err
 		}
 
 	default:
 		state = v1.JobRunStateUnknown
-
-		var err error
-		completionTimestamp, err = jobRunCompletionTimestamp(pod)
-		if err != nil {
-			return v1.JobRunStatus{}, err
-		}
 	}
 
 	status := v1.JobRunStatus{
 		State: state,
+
+		ExitCode: exitCode,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
@@ -209,20 +235,33 @@ func jobRunStatus(pod *corev1.Pod) (v1.JobRunStatus, error) {
 	return status, nil
 }
 
-func jobRunCompletionTimestamp(pod *corev1.Pod) (*time.Time, error) {
+func jobRunCompletionInfo(pod *corev1.Pod) (*time.Time, *int32, bool, error) {
+	state, ok, err := terminatedContainerState(pod)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	if !ok {
+		return nil, nil, false, nil
+	}
+
+	return time.New(state.FinishedAt.Time), &state.ExitCode, true, nil
+}
+
+func terminatedContainerState(pod *corev1.Pod) (*corev1.ContainerStateTerminated, bool, error) {
 	for _, status := range pod.Status.ContainerStatuses {
 		if status.Name != kubeutil.UserMainContainerName {
 			continue
 		}
 
 		if status.State.Terminated == nil {
-			return nil, fmt.Errorf("container %v does not have terminated state", kubeutil.UserMainContainerName)
+			return nil, false, nil
 		}
 
-		return time.New(status.State.Terminated.FinishedAt.Time), nil
+		return status.State.Terminated, true, nil
 	}
 
-	return nil, fmt.Errorf("pod does not have status for %v", kubeutil.UserMainContainerName)
+	return nil, false, fmt.Errorf("pod does not have status for %v", kubeutil.UserMainContainerName)
 }
 
 // the logs endpoint will return a BadRequest error when trying tail the logs of a

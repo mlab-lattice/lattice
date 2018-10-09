@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "deleting_system.go",
         "informer_event_handlers.go",
-        "job.go",
         "live_system.go",
         "node_pool.go",
         "pending_system.go",

@@ -12,4 +12,4 @@ minikube start \
     --vm-driver ${VM_DRIVER} \
     --feature-gates=CustomResourceSubresources=true
 
-${DIR}/install.sh
+${DIR}/install.sh ${@}
