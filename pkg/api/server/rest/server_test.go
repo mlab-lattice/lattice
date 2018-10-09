@@ -404,9 +404,32 @@ func runJob(t *testing.T) {
 
 	fmt.Printf("Job %v succeeded!\n", job.ID)
 
+	// test job runs
+	runs, err := latticeClient.Systems().Jobs(mockSystemID).Runs(job.ID).List()
+	checkErr(err, t)
+
+	if len(runs) != 1 {
+		t.Fatal("bad # of elements for list job runs")
+	}
+
+	run, err := latticeClient.Systems().Jobs(mockSystemID).Runs(job.ID).Get(runs[0].ID)
+	checkErr(err, t)
+
+	if runs[0].ID != run.ID {
+		t.Fatal("bad list job runs contents")
+	}
+
+	if run.Status.State != v1.JobRunStateSucceeded {
+		t.Fatal("bad job run state")
+	}
+
+	if run.Status.ExitCode == nil || *run.Status.ExitCode != 0 {
+		t.Fatal("bad job run exit code")
+	}
+
 	// test job logs
 	fmt.Println("Test Job logs")
-	reader, err := latticeClient.Systems().Jobs(mockSystemID).Logs(job.ID, nil, nil)
+	reader, err := latticeClient.Systems().Jobs(mockSystemID).Runs(job.ID).Logs(run.ID, nil, nil)
 	checkErr(err, t)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(reader)

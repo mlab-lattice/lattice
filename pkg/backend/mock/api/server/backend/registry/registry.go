@@ -27,7 +27,7 @@ type SystemRecord struct {
 
 	Deploys map[v1.DeployID]*v1.Deploy
 
-	Jobs map[v1.JobID]*v1.Job
+	Jobs map[v1.JobID]*JobInfo
 
 	NodePools map[tree.PathSubcomponent]*v1.NodePool
 
@@ -47,6 +47,11 @@ type BuildInfo struct {
 type ServiceInfo struct {
 	Service    *v1.Service
 	Definition *definitionv1.Service
+}
+
+type JobInfo struct {
+	Job  *v1.Job
+	Runs map[v1.JobRunID]v1.JobRun
 }
 
 // both the backend and the controller need the ability to create builds, so it is

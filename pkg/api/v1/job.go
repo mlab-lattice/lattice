@@ -59,6 +59,8 @@ type JobRun struct {
 type JobRunStatus struct {
 	State JobRunState `json:"state"`
 
+	ExitCode *int32 `json:"exitCode"`
+
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }

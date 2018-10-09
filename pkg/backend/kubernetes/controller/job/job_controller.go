@@ -120,9 +120,9 @@ func NewController(
 
 	jobInformer := latticeInformerFactory.Lattice().V1().Jobs()
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleJobRunAdd,
-		UpdateFunc: sc.handleJobRunUpdate,
-		DeleteFunc: sc.handleJobRunDelete,
+		AddFunc:    sc.handleJobAdd,
+		UpdateFunc: sc.handleJobUpdate,
+		DeleteFunc: sc.handleJobDelete,
 	})
 	sc.jobLister = jobInformer.Lister()
 	sc.jobListerSynced = jobInformer.Informer().HasSynced
@@ -139,8 +139,8 @@ func NewController(
 	kubeJobInformer := kubeInformerFactory.Batch().V1().Jobs()
 	kubeJobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleKubeJobAdd,
-		UpdateFunc: sc.handleDeploymentUpdate,
-		DeleteFunc: sc.handleDeploymentDelete,
+		UpdateFunc: sc.handleKubeJobUpdate,
+		DeleteFunc: sc.handleKubeJobDelete,
 	})
 	sc.kubeJobLister = kubeJobInformer.Lister()
 	sc.kubeJobListerSynced = kubeJobInformer.Informer().HasSynced

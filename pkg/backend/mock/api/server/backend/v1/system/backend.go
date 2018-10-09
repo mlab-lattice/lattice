@@ -52,7 +52,7 @@ func (b *Backend) Define(systemID v1.SystemID, definitionURL string) (*v1.System
 
 		Deploys: make(map[v1.DeployID]*v1.Deploy),
 
-		Jobs: make(map[v1.JobID]*v1.Job),
+		Jobs: make(map[v1.JobID]*registry.JobInfo),
 
 		Secrets: make(map[tree.PathSubcomponent]*v1.Secret),
 
@@ -123,8 +123,8 @@ func (b *Backend) Deploys(id v1.SystemID) backendv1.SystemDeployBackend {
 
 func (b *Backend) Jobs(id v1.SystemID) backendv1.SystemJobBackend {
 	return &JobBackend{
-		backend:  b,
-		systemID: id,
+		backend: b,
+		system:  id,
 	}
 }
 

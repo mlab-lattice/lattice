@@ -34,8 +34,8 @@ func (c *Controller) RunDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 	go c.runDeploy(deploy, record)
 }
 
-func (c *Controller) RunJob(job *v1.Job) {
-	go c.runJob(job)
+func (c *Controller) RunJob(job *v1.Job, record *registry.SystemRecord) {
+	go c.runJob(job, record)
 }
 
 func (c *Controller) RunTeardown(teardown *v1.Teardown, record *registry.SystemRecord) {

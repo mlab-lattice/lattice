@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	jobcommand "github.com/mlab-lattice/lattice/pkg/latticectl/jobs/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
@@ -21,7 +22,7 @@ func Status() *cli.Command {
 		watch  bool
 	)
 
-	cmd := JobCommand{
+	cmd := jobcommand.JobCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -33,7 +34,7 @@ func Status() *cli.Command {
 			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
-		Run: func(ctx *JobCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *jobcommand.JobCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {

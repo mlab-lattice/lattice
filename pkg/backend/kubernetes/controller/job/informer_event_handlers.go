@@ -99,26 +99,26 @@ func (c *Controller) newServiceMesh() error {
 	return nil
 }
 
-func (c *Controller) handleJobRunAdd(obj interface{}) {
-	jobRun := obj.(*latticev1.JobRun)
+func (c *Controller) handleJobAdd(obj interface{}) {
+	job := obj.(*latticev1.Job)
 
-	if jobRun.DeletionTimestamp != nil {
+	if job.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleJobRunDelete(jobRun)
+		c.handleJobDelete(job)
 		return
 	}
 
-	c.handleJobRunEvent(jobRun, "added")
+	c.handleJobEvent(job, "added")
 }
 
-func (c *Controller) handleJobRunUpdate(old, cur interface{}) {
-	jobRun := cur.(*latticev1.JobRun)
-	c.handleJobRunEvent(jobRun, "updated")
+func (c *Controller) handleJobUpdate(old, cur interface{}) {
+	job := cur.(*latticev1.Job)
+	c.handleJobEvent(job, "updated")
 }
 
-func (c *Controller) handleJobRunDelete(obj interface{}) {
-	jobRun, ok := obj.(*latticev1.JobRun)
+func (c *Controller) handleJobDelete(obj interface{}) {
+	job, ok := obj.(*latticev1.Job)
 
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -126,19 +126,19 @@ func (c *Controller) handleJobRunDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		jobRun, ok = tombstone.Obj.(*latticev1.JobRun)
+		job, ok = tombstone.Obj.(*latticev1.Job)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a job run %#v", obj))
 			return
 		}
 	}
 
-	c.handleJobRunEvent(jobRun, "deleted")
+	c.handleJobEvent(job, "deleted")
 }
 
-func (c *Controller) handleJobRunEvent(jobRun *latticev1.JobRun, verb string) {
-	glog.V(4).Infof("%v %v", jobRun.Description(c.namespacePrefix), verb)
-	c.enqueue(jobRun)
+func (c *Controller) handleJobEvent(job *latticev1.Job, verb string) {
+	glog.V(4).Infof("%v %v", job.Description(c.namespacePrefix), verb)
+	c.enqueue(job)
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {
@@ -184,7 +184,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 func (c *Controller) handleNodePoolEvent(nodePool *latticev1.NodePool, verb string) {
 	glog.V(4).Infof("%v %v", nodePool.Description(c.namespacePrefix), verb)
 
-	jobs, err := c.nodePoolJobRuns(nodePool)
+	jobs, err := c.nodePoolJobs(nodePool)
 	if err != nil {
 		// FIXME: log/send warn event
 		return
@@ -202,23 +202,23 @@ func (c *Controller) handleKubeJobAdd(obj interface{}) {
 	if job.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleDeploymentDelete(job)
+		c.handleKubeJobDelete(job)
 		return
 	}
 
-	c.handleJobEvent(job, "added")
+	c.handleKubeJobEvent(job, "added")
 }
 
-// handleDeploymentUpdate figures out what Service manages a Deployment when the Deployment
+// handleKubeJobUpdate figures out what Service manages a Deployment when the Deployment
 // is updated and enqueues it.
-func (c *Controller) handleDeploymentUpdate(old, cur interface{}) {
+func (c *Controller) handleKubeJobUpdate(old, cur interface{}) {
 	job := cur.(*batchv1.Job)
-	c.handleJobEvent(job, "updated")
+	c.handleKubeJobEvent(job, "updated")
 }
 
-// handleDeploymentDelete enqueues the Service that manages a Deployment when
+// handleKubeJobDelete enqueues the Service that manages a Deployment when
 // the Deployment is deleted.
-func (c *Controller) handleDeploymentDelete(obj interface{}) {
+func (c *Controller) handleKubeJobDelete(obj interface{}) {
 	job, ok := obj.(*batchv1.Job)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
@@ -237,22 +237,22 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 		}
 	}
 
-	c.handleJobEvent(job, "deleted")
+	c.handleKubeJobEvent(job, "deleted")
 }
 
-func (c *Controller) handleJobEvent(job *batchv1.Job, verb string) {
+func (c *Controller) handleKubeJobEvent(job *batchv1.Job, verb string) {
 	glog.V(4).Infof("job %v/%v %v", job.Namespace, job.Name, verb)
 
-	// see if the job has a jobRun as a controller owning reference
+	// see if the job has a job as a controller owning reference
 	if controllerRef := metav1.GetControllerOf(job); controllerRef != nil {
-		jobRun := c.resolveControllerRef(job.Namespace, controllerRef)
+		job := c.resolveControllerRef(job.Namespace, controllerRef)
 
 		// Not a Service Deployment.
-		if jobRun == nil {
+		if job == nil {
 			return
 		}
 
-		c.enqueue(jobRun)
+		c.enqueue(job)
 		return
 	}
 
@@ -279,48 +279,48 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 		}
 	}
 
-	jobRunID, ok := pod.Labels[latticev1.JobRunIDLabelKey]
+	jobID, ok := pod.Labels[latticev1.JobIDLabelKey]
 	if !ok {
-		// not a jobRun pod
+		// not a job pod
 		return
 	}
 
-	jobRun, err := c.jobLister.JobRuns(pod.Namespace).Get(jobRunID)
+	job, err := c.jobLister.Jobs(pod.Namespace).Get(jobID)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// jobRun doesn't exist anymore, so it doesn't care about this
+			// job doesn't exist anymore, so it doesn't care about this
 			// pod's deletion
 			return
 		}
 
-		runtime.HandleError(fmt.Errorf("error retrieving job run %v/%v", pod.Namespace, jobRunID))
+		runtime.HandleError(fmt.Errorf("error retrieving job run %v/%v", pod.Namespace, jobID))
 		return
 	}
 
 	glog.V(4).Infof("pod %s/%s deleted", pod.Namespace, pod.Name)
-	c.enqueue(jobRun)
+	c.enqueue(job)
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.JobRun {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Job {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != latticev1.JobRunKind.Kind {
+	if controllerRef.Kind != latticev1.JobKind.Kind {
 		return nil
 	}
 
-	jobRun, err := c.jobLister.JobRuns(namespace).Get(controllerRef.Name)
+	job, err := c.jobLister.Jobs(namespace).Get(controllerRef.Name)
 	if err != nil {
 		// FIXME(kevindrosendahl): send error?
 		return nil
 	}
 
-	if jobRun.UID != controllerRef.UID {
+	if job.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
 		// ControllerRef points to.
 		return nil
 	}
-	return jobRun
+	return job
 }

@@ -1,4 +1,4 @@
-package latticectl
+package jobs
 
 import (
 	"fmt"
@@ -10,7 +10,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/jobs"
+	jobcommand "github.com/mlab-lattice/lattice/pkg/latticectl/jobs/command"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/jobs/runs"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
@@ -18,15 +19,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// Jobs returns a *cli.Command to list a system's jobs with subcommands to interact
-// with individual jobs.
-func Jobs() *cli.Command {
+// Runs returns a *cli.Command to list a job's runs with subcommands to interact
+// with individual runs.
+func Runs() *cli.Command {
 	var (
 		output string
 		watch  bool
 	)
 
-	cmd := command.SystemCommand{
+	cmd := jobcommand.JobCommand{
 		Flags: map[string]cli.Flag{
 			command.OutputFlagName: command.OutputFlag(
 				&output,
@@ -38,41 +39,41 @@ func Jobs() *cli.Command {
 			),
 			command.WatchFlagName: command.WatchFlag(&watch),
 		},
-		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *jobcommand.JobCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {
-				return WatchJobs(ctx.Client, ctx.System, format)
+				return WatchRuns(ctx.Client, ctx.System, ctx.Job, format)
 			}
 
-			return PrintJobs(ctx.Client, ctx.System, os.Stdout, format)
+			return PrintRuns(ctx.Client, ctx.System, ctx.Job, os.Stdout, format)
 		},
 		Subcommands: map[string]*cli.Command{
-			"run":    jobs.Run(),
-			"status": jobs.Status(),
+			"logs":   runs.Logs(),
+			"status": runs.Status(),
 		},
 	}
 
 	return cmd.Command()
 }
 
-// PrintJobs prints the system's jobs to the supplied writer.
-func PrintJobs(client client.Interface, system v1.SystemID, w io.Writer, format printer.Format) error {
-	jobs, err := client.V1().Systems().Jobs(system).List()
+// PrintRuns prints the job's runs to the supplied writer.
+func PrintRuns(client client.Interface, system v1.SystemID, job v1.JobID, w io.Writer, format printer.Format) error {
+	runs, err := client.V1().Systems().Jobs(system).Runs(job).List()
 	if err != nil {
 		return err
 	}
 
 	switch format {
 	case printer.FormatTable:
-		t := jobsTable(w)
-		r := jobsTableRows(jobs)
+		t := jobRunsTable(w)
+		r := jobRunsTableRows(runs)
 		t.AppendRows(r)
 		t.Print()
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(jobs)
+		j.Print(runs)
 
 	default:
 		return fmt.Errorf("unexpected format %v", format)
@@ -81,65 +82,65 @@ func PrintJobs(client client.Interface, system v1.SystemID, w io.Writer, format 
 	return nil
 }
 
-// WatchJobs watches the system's jobs, updating output based on changes.
+// WatchRuns watches the job's runs, updating output based on changes.
 // When passed in printer.Table as f, the table uses some ANSI escapes to overwrite some of the terminal buffer,
 // so it always writes to stdout and does not accept an io.Writer.
-func WatchJobs(client client.Interface, system v1.SystemID, format printer.Format) error {
+func WatchRuns(client client.Interface, system v1.SystemID, job v1.JobID, format printer.Format) error {
 	// Poll the API for the systems and send it to the channel
-	jobs := make(chan []v1.Job)
+	runs := make(chan []v1.JobRun)
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			d, err := client.V1().Systems().Jobs(system).List()
+			d, err := client.V1().Systems().Jobs(system).Runs(job).List()
 			if err != nil {
 				return false, err
 			}
 
-			jobs <- d
+			runs <- d
 			return false, nil
 		},
 	)
 
-	var handle func([]v1.Job)
+	var handle func([]v1.JobRun)
 	switch format {
 	case printer.FormatTable:
-		t := jobsTable(os.Stdout)
-		handle = func(jobs []v1.Job) {
-			r := jobsTableRows(jobs)
+		t := jobRunsTable(os.Stdout)
+		handle = func(runs []v1.JobRun) {
+			r := jobRunsTableRows(runs)
 			t.Overwrite(r)
 		}
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(os.Stdout)
-		handle = func(jobs []v1.Job) {
-			j.Print(jobs)
+		handle = func(runs []v1.JobRun) {
+			j.Print(runs)
 		}
 
 	default:
 		return fmt.Errorf("unexpected format %v", format)
 	}
 
-	for d := range jobs {
+	for d := range runs {
 		handle(d)
 	}
 
 	return nil
 }
 
-func jobsTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []string{"ID", "PATH", "STATE", "STARTED", "COMPLETED"})
+func jobRunsTable(w io.Writer) *printer.Table {
+	return printer.NewTable(w, []string{"ID", "STATE", "STARTED", "COMPLETED"})
 }
 
-func jobsTableRows(jobs []v1.Job) [][]string {
+func jobRunsTableRows(runs []v1.JobRun) [][]string {
 	var rows [][]string
-	for _, job := range jobs {
+	for _, job := range runs {
 		stateColor := color.WarningString
 		switch job.Status.State {
-		case v1.JobStateSucceeded:
+		case v1.JobRunStateSucceeded:
 			stateColor = color.SuccessString
 
-		case v1.JobStateFailed:
+		case v1.JobRunStateFailed:
 			stateColor = color.FailureString
 		}
 
@@ -155,7 +156,6 @@ func jobsTableRows(jobs []v1.Job) [][]string {
 
 		rows = append(rows, []string{
 			color.IDString(string(job.ID)),
-			job.Path.String(),
 			stateColor(string(job.Status.State)),
 			started,
 			completed,
@@ -163,7 +163,7 @@ func jobsTableRows(jobs []v1.Job) [][]string {
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 3
+	startedIdx := 2
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

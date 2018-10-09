@@ -11,6 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/jobs/runs"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
@@ -122,10 +123,24 @@ func RunJob(
 		return nil
 	}
 
-	return JobLogs(
+	var run v1.JobRunID
+	for {
+		runs, err := client.V1().Systems().Jobs(system).Runs(job.ID).List()
+		if err != nil {
+			return err
+		}
+
+		if len(runs) != 0 {
+			run = runs[0].ID
+			break
+		}
+	}
+
+	return runs.RunLogs(
 		client,
 		system,
 		job.ID,
+		run,
 		nil,
 		follow,
 		false,

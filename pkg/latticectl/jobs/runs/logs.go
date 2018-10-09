@@ -1,4 +1,4 @@
-package jobs
+package runs
 
 import (
 	"io"
@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	runcommand "github.com/mlab-lattice/lattice/pkg/latticectl/jobs/runs/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
@@ -23,7 +24,7 @@ func Logs() *cli.Command {
 		tail       int
 	)
 
-	cmd := JobCommand{
+	cmd := runcommand.JobRunCommand{
 		Flags: map[string]cli.Flag{
 			"follow":                &flags.Bool{Target: &follow},
 			"previous":              &flags.Bool{Target: &previous},
@@ -32,16 +33,17 @@ func Logs() *cli.Command {
 			"since":                 &flags.String{Target: &since},
 			"tail":                  &flags.Int{Target: &tail},
 		},
-		Run: func(ctx *JobCommandContext, args []string, flags cli.Flags) error {
+		Run: func(ctx *runcommand.JobRunCommandContext, args []string, flags cli.Flags) error {
 			var sidecarPtr *string
 			if flags[command.SidecarFlagName].Set() {
 				sidecarPtr = &sidecar
 			}
 
-			return JobLogs(
+			return RunLogs(
 				ctx.Client,
 				ctx.System,
 				ctx.Job,
+				ctx.JobRun,
 				sidecarPtr,
 				follow,
 				previous,
@@ -56,11 +58,12 @@ func Logs() *cli.Command {
 	return cmd.Command()
 }
 
-// JobLogs prints the logs for the specified job to the supplied writer.
-func JobLogs(
+// RunLogs prints the logs for the specified job to the supplied writer.
+func RunLogs(
 	client client.Interface,
 	system v1.SystemID,
-	id v1.JobID,
+	job v1.JobID,
+	id v1.JobRunID,
 	sidecar *string,
 	follow bool,
 	previous bool,
@@ -77,19 +80,14 @@ func JobLogs(
 		Tail:       &tail,
 	}
 	for {
-		logs, err := client.V1().Systems().Jobs(system).Logs(id, sidecar, options)
+		logs, err := client.V1().Systems().Jobs(system).Runs(job).Logs(id, sidecar, options)
 		if err != nil {
 			v1err, ok := err.(*v1.Error)
 			if !ok {
 				return err
 			}
 
-			// INVALID_INSTANCE indicates the job has not run yet, so if that is
-			// the error we should wait
-			// TODO(kevindrosendahl): ^ is somewhat a lie.
-			//                        currently in the k8s backend, it means either there are 0 or multiple
-			//                        pods for the job. should refine this in both latticectl and the api
-			if v1err.Code != v1.ErrorCodeInvalidServiceInstanceID {
+			if v1err.Code != v1.ErrorCodeLogsUnavailable {
 				return err
 			}
 
