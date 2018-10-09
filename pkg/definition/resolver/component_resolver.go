@@ -12,6 +12,7 @@ import (
 
 const (
 	DepthInfinite = -1
+	DefaultDepth  = 500
 
 	fileExtensionJSON = ".json"
 	fileExtensionYAML = ".yaml"

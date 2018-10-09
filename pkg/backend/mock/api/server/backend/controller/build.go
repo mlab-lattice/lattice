@@ -130,7 +130,7 @@ func (c *Controller) resolveBuildComponent(build *v1.Build, record *registry.Sys
 
 	log.Printf("resolving definition for build %v", build.ID)
 
-	t, err := c.componentResolver.Resolve(cmpnt, record.System.ID, path, ctx, resolver.DepthInfinite)
+	t, err := c.componentResolver.Resolve(cmpnt, record.System.ID, path, ctx, resolver.DefaultDepth)
 	c.registry.Lock()
 	defer c.registry.Unlock()
 

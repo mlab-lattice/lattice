@@ -13,12 +13,14 @@ container_image(
         packages["libip6tc0"],
         packages["libxtables12"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-helm-bin",
     directory = "/usr/local/bin",
     files = ["@helm_bin//:bin"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -28,12 +30,14 @@ container_image(
         packages["libjq1"],
         packages["libonig4"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-kubectl-bin",
     directory = "/usr/local/bin",
     files = ["@kubectl_bin//:bin"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -44,18 +48,21 @@ container_image(
         ":base-jq-bin",
         ":base-kubectl-bin",
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-terraform-bin",
     directory = "/usr/local/bin",
     files = ["@terraform_bin//:bin"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-terraform-modules-kubernetes",
     directory = "/etc/terraform",
     tars = ["//terraform/kubernetes:modules-tar"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -65,6 +72,7 @@ container_image(
         ":base-terraform-bin",
         ":base-terraform-modules-kubernetes",
     ],
+    visibility = ["//visibility:public"],
 )
 
 # base container go images

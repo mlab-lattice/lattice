@@ -182,14 +182,14 @@ subjects:
   namespace: {{ .Values.prefix }}-internal
 ---
 # create auth tokens config map if auth tokens content are present
-{{ if .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents}}
+{{ if .Values.controlPlane.apiServer.auth.staticTokenFileContents}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: api-server-auth-tokens
+  name: api-server-static-auth-tokens
   namespace: {{ .Values.prefix }}-internal
 data:
-  auth-tokens.csv: {{quote .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents }}
+  auth-tokens.csv: {{quote .Values.controlPlane.apiServer.auth.staticTokenFileContents }}
 {{ end }}
 ---
 apiVersion: apps/v1
@@ -224,7 +224,7 @@ spec:
         - --api-auth-key
         - {{ quote .Values.controlPlane.apiServer.auth.apiKey }}
         {{ end }}
-        {{ if .Values.controlPlane.apiServer.auth.bootstrapTokenFileContents}}
+        {{ if .Values.controlPlane.apiServer.auth.staticTokenFileContents}}
         - --static-token-auth-file
         - /etc/static-auth-tokens/auth-tokens.csv
         {{ end }}
