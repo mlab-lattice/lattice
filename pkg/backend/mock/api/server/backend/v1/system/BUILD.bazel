@@ -19,9 +19,10 @@ go_library(
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/mock/api/server/backend/controller:go_default_library",
         "//pkg/backend/mock/api/server/backend/registry:go_default_library",
-        "//pkg/definition/component/resolver:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/definition/v1:go_default_library",
+        "//pkg/util/time:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",
     ],
 )

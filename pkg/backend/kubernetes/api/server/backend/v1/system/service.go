@@ -3,14 +3,16 @@ package system
 import (
 	"fmt"
 	"io"
-
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
+
 	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -220,7 +222,7 @@ func (b *serviceBackend) transformService(
 		}
 
 		failureInfo = &v1.ServiceFailureInfo{
-			Time:    service.Status.FailureInfo.Timestamp.Time,
+			Time:    *time.New(service.Status.FailureInfo.Timestamp.Time),
 			Message: failureMessage,
 		}
 	}

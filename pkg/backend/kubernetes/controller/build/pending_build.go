@@ -5,8 +5,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -87,7 +87,7 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		return err
 	}
 
-	t, err := c.componentResolver.Resolve(cmpnt, systemID, path, ctx, resolver.DepthInfinite)
+	t, err := c.componentResolver.Resolve(cmpnt, systemID, path, ctx, resolver.DefaultDepth)
 	if err != nil {
 		_, err := c.updateBuildStatus(
 			build,
@@ -164,7 +164,7 @@ func (c *Controller) getBuildComponent(
 	system *latticev1.System,
 	build *latticev1.Build,
 ) (
-	tree.Path, component.Interface,
+	tree.Path, definition.Component,
 	*git.CommitReference,
 	v1.Version,
 	error,

@@ -1,16 +1,9 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver/template"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver/template"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularTemplate = "template"
-	ResourcePluralTemplate   = "templates"
-	ResourceScopeTemplate    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (
@@ -27,8 +20,6 @@ type Template struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              TemplateSpec `json:"spec"`
 }
-
-// +k8s:deepcopy-gen=false
 
 type TemplateSpec struct {
 	Template *template.Template `json:"template"`

@@ -5,16 +5,9 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularBuild = "build"
-	ResourcePluralBuild   = "builds"
-	ResourceScopeBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (
@@ -58,7 +51,6 @@ type BuildSpec struct {
 	Path    *tree.Path  `json:"path"`
 }
 
-// +k8s:deepcopy-gen=false
 type BuildStatus struct {
 	// Build specs are immutable so no need for ObservedGeneration
 

@@ -9,12 +9,13 @@ import (
 
 const (
 	flagBearerToken     = "bearer-token"
+	flagLegacyAPIKey    = "legacy-api-key"
 	flagName            = "name"
 	flagUnauthenticated = "unauthenticated"
 	flagURL             = "url"
 )
 
-var authFlags = []string{flagBearerToken, flagUnauthenticated}
+var authFlags = []string{flagBearerToken, flagLegacyAPIKey, flagUnauthenticated}
 
 func Create() *cli.Command {
 	var (
@@ -60,7 +61,8 @@ func Create() *cli.Command {
 			}
 
 			var auth *command.AuthContext
-			if bearerToken != "" {
+			switch {
+			case bearerToken != "":
 				auth = &command.AuthContext{BearerToken: &bearerToken}
 			}
 

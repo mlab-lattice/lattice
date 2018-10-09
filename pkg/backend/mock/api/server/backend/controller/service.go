@@ -77,11 +77,11 @@ func (c *Controller) addService(
 				float64(definition.NumInstances),
 			))
 
+			diff := available - service.Status.AvailableInstances
 			service.Status.AvailableInstances = available
 			service.Status.UpdatedInstances = available
 
 			// add new instance ids
-			diff := available - service.Status.AvailableInstances
 			var newInstances []string
 			for i := int32(0); i < diff; i++ {
 				newInstances = append(newInstances, uuid.NewV4().String())
@@ -204,7 +204,12 @@ func (c *Controller) terminateService(path tree.Path, record *registry.SystemRec
 			service.Status.UpdatedInstances = 0
 			service.Status.StaleInstances = 0
 			service.Status.TerminatingInstances = remainingTerminating
-			service.Status.Instances = service.Status.Instances[:remainingTerminating]
+
+			if remainingTerminating == 0 {
+				service.Status.Instances = []string{}
+			} else {
+				service.Status.Instances = service.Status.Instances[:remainingTerminating]
+			}
 
 			return service.Status.TerminatingInstances == 0
 		}()

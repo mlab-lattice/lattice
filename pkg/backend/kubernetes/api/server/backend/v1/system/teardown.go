@@ -5,12 +5,12 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/satori/go.uuid"
-	"time"
 )
 
 type teardownBackend struct {
@@ -106,12 +106,12 @@ func transformTeardown(teardown *latticev1.Teardown) (v1.Teardown, error) {
 
 	var startTimestamp *time.Time
 	if teardown.Status.StartTimestamp != nil {
-		startTimestamp = &teardown.Status.StartTimestamp.Time
+		startTimestamp = time.New(teardown.Status.StartTimestamp.Time)
 	}
 
 	var completionTimestamp *time.Time
 	if teardown.Status.CompletionTimestamp != nil {
-		startTimestamp = &teardown.Status.CompletionTimestamp.Time
+		completionTimestamp = time.New(teardown.Status.CompletionTimestamp.Time)
 	}
 
 	externalTeardown := v1.Teardown{

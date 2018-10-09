@@ -9,15 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularService = "service"
-	ResourcePluralService   = "services"
-	ResourceScopeService    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (
@@ -29,6 +21,8 @@ var (
 
 	// ServiceID label is the key that should be used for the path of the service.
 	ServicePathLabelKey = fmt.Sprintf("service.%v/path", GroupName)
+
+	ServiceDeploymentSpecHashAnnotationKey = fmt.Sprintf("service.%v/deployment-spec-hash", GroupName)
 )
 
 // +genclient
@@ -76,6 +70,15 @@ func (s *Service) PathLabel() (tree.Path, error) {
 	return tree.NewPathFromDomain(path)
 }
 
+func (s *Service) DeploymentSpecHashAnnotation() (string, bool) {
+	annotation, ok := s.Annotations[ServiceDeploymentSpecHashAnnotationKey]
+	if !ok {
+		return "", false
+	}
+
+	return annotation, true
+}
+
 func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	annotation := make(NodePoolAnnotationValue)
 	existingAnnotationString, ok := s.Annotations[NodePoolWorkloadAnnotationKey]
@@ -99,7 +102,6 @@ func (s *Service) NeedsAddressLoadBalancer() bool {
 	return false
 }
 
-// +k8s:deepcopy-gen=false
 type ServiceSpec struct {
 	Definition definitionv1.Service `json:"definition"`
 

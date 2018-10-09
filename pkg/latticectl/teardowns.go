@@ -124,32 +124,11 @@ func WatchTeardowns(client client.Interface, system v1.SystemID, format printer.
 }
 
 func teardownsTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "id",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "started",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "completed",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+	return printer.NewTable(w, []string{"ID", "STATE", "STARTED", "COMPLETED"})
 }
 
-func teardownsTableRows(teardowns []v1.Teardown) []printer.TableRow {
-	var rows []printer.TableRow
+func teardownsTableRows(teardowns []v1.Teardown) [][]string {
+	var rows [][]string
 	for _, teardown := range teardowns {
 		stateColor := color.WarningString
 		switch teardown.Status.State {
@@ -160,32 +139,26 @@ func teardownsTableRows(teardowns []v1.Teardown) []printer.TableRow {
 			stateColor = color.FailureString
 		}
 
-		message := "-"
-		if teardown.Status.Message != "" {
-			message = teardown.Status.Message
-		}
-
 		started := "-"
 		if teardown.Status.StartTimestamp != nil {
-			started = teardown.Status.StartTimestamp.Format(time.RFC1123)
+			started = teardown.Status.StartTimestamp.Local().Format(time.RFC1123)
 		}
 
 		completed := "-"
 		if teardown.Status.StartTimestamp != nil {
-			completed = teardown.Status.StartTimestamp.Format(time.RFC1123)
+			completed = teardown.Status.StartTimestamp.Local().Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{
 			color.IDString(string(teardown.ID)),
 			stateColor(string(teardown.Status.State)),
-			message,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 3
+	startedIdx := 2
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

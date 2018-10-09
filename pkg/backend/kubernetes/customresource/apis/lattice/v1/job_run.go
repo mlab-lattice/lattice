@@ -9,15 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularJobRun = "jobrun"
-	ResourcePluralJobRun   = "jobruns"
-	ResourceScopeJobRun    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (
@@ -81,13 +73,12 @@ func (s *JobRun) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	return annotation, nil
 }
 
-// +k8s:deepcopy-gen=false
 type JobRunSpec struct {
 	Definition definitionv1.Job `json:"definition"`
 
-	NumRetries  *int32                            `json:"numRetries"`
-	Command     []string                          `json:"command"`
-	Environment definitionv1.ContainerEnvironment `json:"environment"`
+	NumRetries  *int32                                `json:"numRetries"`
+	Command     []string                              `json:"command"`
+	Environment definitionv1.ContainerExecEnvironment `json:"environment"`
 
 	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`

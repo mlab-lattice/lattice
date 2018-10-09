@@ -67,6 +67,13 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 		return
 	}
 
+	// FIXME(kevindrosendahl): temporary hack to prevent people from making systems with too large of names
+	//                         tracking in https://github.com/mlab-lattice/lattice/issues/176
+	if len(req.ID) > 9 {
+		c.JSON(http.StatusBadRequest, v1.NewInvalidSystemOptionsError())
+		return
+	}
+
 	system, err := api.backend.Systems().Create(req.ID, req.DefinitionURL)
 	if err != nil {
 		v1err, ok := err.(*v1.Error)

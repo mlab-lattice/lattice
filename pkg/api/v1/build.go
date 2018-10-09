@@ -1,9 +1,8 @@
 package v1
 
 import (
-	"time"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 type (

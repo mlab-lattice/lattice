@@ -66,6 +66,7 @@ func (c *LatticeCommand) Command() *cli.Command {
 
 			case context.Auth.BearerToken != nil:
 				client = rest.NewBearerTokenClient(context.URL, *context.Auth.BearerToken)
+				break
 
 			default:
 				return fmt.Errorf("invalid auth options for context %v", contextName)

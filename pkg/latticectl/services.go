@@ -128,36 +128,11 @@ func WatchServices(client client.Interface, id v1.SystemID, w io.Writer, f print
 }
 
 func servicesTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "service",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "available",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "updated",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "stale",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "terminating",
-			Alignment: printer.TableAlignRight,
-		},
-	})
+	return printer.NewTable(w, []string{"PATH", "STATE", "AVAILABLE", "UPDATED", "STALE", "TERMINATING"})
 }
 
-func servicesTableRows(services []v1.Service) []printer.TableRow {
-	var rows []printer.TableRow
+func servicesTableRows(services []v1.Service) [][]string {
+	var rows [][]string
 	for _, service := range services {
 		var stateColor color.Formatter
 		switch service.Status.State {

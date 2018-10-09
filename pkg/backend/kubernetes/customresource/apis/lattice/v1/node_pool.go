@@ -2,23 +2,16 @@ package v1
 
 import (
 	"fmt"
-
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 	"strconv"
 	"strings"
-)
 
-const (
-	ResourceSingularNodePool = "nodepool"
-	ResourcePluralNodePool   = "nodepools"
-	ResourceScopeNodePool    = apiextensionsv1beta1.NamespaceScoped
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -346,10 +339,21 @@ type NodePoolList struct {
 //		"bar": { "abc": [1, 2] },
 //		"foo": { "xyz": [5] }
 //	}
-// +k8s:deepcopy-gen=false
 type NodePoolAnnotationValue map[string]NodePoolAnnotationValueNamespace
 
-// +k8s:deepcopy-gen=false
+func (in NodePoolAnnotationValue) DeepCopyInto(out *NodePoolAnnotationValue) {
+	{
+		in := &in
+		*out = make(NodePoolAnnotationValue, len(*in))
+		for key, val := range *in {
+			// generated deep copy kept trying to dereference the result of val.DeepCopy(),
+			// but in this case it's not a pointer so it shouldn't be dereferenced
+			(*out)[key] = val.DeepCopy()
+		}
+		return
+	}
+}
+
 type NodePoolAnnotationValueNamespace map[string][]NodePoolEpoch
 
 func (a NodePoolAnnotationValue) IsEmpty() bool {

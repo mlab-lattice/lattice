@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
@@ -39,7 +40,7 @@ func Command() *cli.RootCommand {
 	var namespacePrefix string
 	var workDirectory string
 	var port int32
-	var apiAuthKey string
+	var tokenAuthFile string
 
 	command := &cli.RootCommand{
 		Name: "api-server",
@@ -64,10 +65,9 @@ func Command() *cli.RootCommand {
 					Default: 8080,
 					Target:  &port,
 				},
-				"api-auth-key": &flags.String{
-					Usage:   "if supplied, the required value of the API_KEY header",
-					Default: "",
-					Target:  &apiAuthKey,
+				"static-token-auth-file": &flags.String{
+					Usage:  "path for token file for bearer token authenticator",
+					Target: &tokenAuthFile,
 				},
 			},
 			Run: func(args []string, flags cli.Flags) error {
@@ -107,9 +107,10 @@ func Command() *cli.RootCommand {
 				if err != nil {
 					return err
 				}
-
+				// construct server options
+				options := createServerOptions(tokenAuthFile)
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
-				rest.RunNewRestServer(backend, r, port, apiAuthKey)
+				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
 		},
@@ -125,7 +126,8 @@ func setupSSH() {
 	// but since the subcommand isn't executed in a shell, this obviously didn't work.
 	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
 	if err != nil {
-		log.Fatal("error setting up ssh-agent: " + err.Error())
+		log.Printf("error setting up ssh-agent: \n" + err.Error())
+		log.Fatalf("output: %v", out)
 	}
 
 	// This expects the output to look like:
@@ -145,4 +147,18 @@ func setupSSH() {
 	if err != nil {
 		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
 	}
+}
+
+func createServerOptions(tokenAuthFile string) *rest.ServerOptions {
+	options := rest.NewServerOptions()
+
+	// enable api authentication key as needed
+	if tokenAuthFile != "" {
+		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
+		if err != nil {
+			panic(err)
+		}
+		options.AuthOptions.Token = tokenAuthenticator
+	}
+	return options
 }

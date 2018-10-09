@@ -18,10 +18,10 @@ type JobBackend struct {
 func (b *JobBackend) Run(
 	path tree.Path,
 	command []string,
-	environment definitionv1.ContainerEnvironment,
+	environment definitionv1.ContainerExecEnvironment,
 ) (*v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -53,15 +53,12 @@ func (b *JobBackend) Run(
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Job)
-	*result = *job
-
-	return result, nil
+	return job.DeepCopy(), nil
 }
 
 func (b *JobBackend) List() ([]v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -70,14 +67,14 @@ func (b *JobBackend) List() ([]v1.Job, error) {
 
 	var jobs []v1.Job
 	for _, job := range record.Jobs {
-		jobs = append(jobs, *job)
+		jobs = append(jobs, *job.DeepCopy())
 	}
 
 	return jobs, nil
 }
 func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -91,10 +88,7 @@ func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Job)
-	*result = *job
-
-	return result, nil
+	return job.DeepCopy(), nil
 }
 
 func (b *JobBackend) Logs(

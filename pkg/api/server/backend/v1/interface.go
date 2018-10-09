@@ -44,7 +44,7 @@ type SystemDeployBackend interface {
 }
 
 type SystemJobBackend interface {
-	Run(path tree.Path, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
+	Run(path tree.Path, command []string, environment definitionv1.ContainerExecEnvironment) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
 	Logs(id v1.JobID, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)

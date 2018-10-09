@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
@@ -118,7 +118,7 @@ type containersComponent struct {
 	Sidecars      map[string]definitionv1.Container
 }
 
-func newContainersComponent(component component.Interface) (*containersComponent, error) {
+func newContainersComponent(component definition.Component) (*containersComponent, error) {
 	switch c := component.(type) {
 	case *definitionv1.Job:
 		cc := &containersComponent{

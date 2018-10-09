@@ -8,14 +8,7 @@ import (
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularContainerBuild = "containerbuild"
-	ResourcePluralContainerBuild   = "containerbuilds"
-	ResourceScopeContainerBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (
@@ -75,7 +68,6 @@ func (b *ContainerBuild) Description(namespacePrefix string) string {
 	return fmt.Sprintf("component build %v (system %v)", b.Name, systemID)
 }
 
-// +k8s:deepcopy-gen=false
 type ContainerBuildSpec struct {
 	Definition *definitionv1.ContainerBuild `json:"definition"`
 }

@@ -6,14 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularTeardown = "teardown"
-	ResourcePluralTeardown   = "teardowns"
-	ResourceScopeTeardown    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (

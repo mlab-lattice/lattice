@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 const ComponentTypeService = "service"
 
-var ServiceType = component.Type{
+var ServiceType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeService,
 }
 
 //  NOTE: if you update the Service struct, you _must_ update the
 //        serviceEncoder struct as well as the serviceIR struct
+
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition.Component
 
 type Service struct {
 	Description string
@@ -29,7 +31,7 @@ type Service struct {
 	InstanceType *string
 }
 
-func (s *Service) Type() component.Type {
+func (s *Service) Type() definition.Type {
 	return ServiceType
 }
 
@@ -104,8 +106,8 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 }
 
 type serviceEncoder struct {
-	Type        component.Type `json:"type"`
-	Description string         `json:"description,omitempty"`
+	Type        definition.Type `json:"type"`
+	Description string          `json:"description,omitempty"`
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`

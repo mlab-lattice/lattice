@@ -8,8 +8,8 @@ import (
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver/template"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver/template"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 

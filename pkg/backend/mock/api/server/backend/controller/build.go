@@ -7,11 +7,12 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 
 	"github.com/satori/go.uuid"
 )
@@ -31,9 +32,9 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 		defer c.registry.Unlock()
 		log.Printf("running workload builds for build %v", build.ID)
 
-		now := time.Now()
+		now := timeutil.New(time.Now())
 		build.Status.State = v1.BuildStateRunning
-		build.Status.StartTimestamp = &now
+		build.Status.StartTimestamp = now
 		build.Status.Workloads = make(map[tree.Path]v1.WorkloadBuild)
 
 		info := record.Builds[build.ID]
@@ -45,7 +46,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 					Status: v1.ContainerBuildStatus{
 						State: v1.ContainerBuildStateRunning,
 
-						StartTimestamp: &now,
+						StartTimestamp: now,
 					},
 				},
 				Sidecars: make(map[string]v1.ContainerBuild),
@@ -58,7 +59,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 					Status: v1.ContainerBuildStatus{
 						State: v1.ContainerBuildStateRunning,
 
-						StartTimestamp: &now,
+						StartTimestamp: now,
 					},
 				}
 			}
@@ -75,7 +76,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 
 	c.registry.Lock()
 	defer c.registry.Unlock()
-	now := time.Now()
+	now := timeutil.New(time.Now())
 
 	// Complete service builds and build.
 	for path, workload := range build.Status.Workloads {
@@ -86,7 +87,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 				State: v1.ContainerBuildStateSucceeded,
 
 				StartTimestamp:      workload.Status.StartTimestamp,
-				CompletionTimestamp: &now,
+				CompletionTimestamp: now,
 			},
 		}
 
@@ -98,7 +99,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 					State: v1.ContainerBuildStateSucceeded,
 
 					StartTimestamp:      workload.Sidecars[sidecar].Status.StartTimestamp,
-					CompletionTimestamp: &now,
+					CompletionTimestamp: now,
 				},
 			}
 		}
@@ -107,7 +108,7 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 	}
 
 	build.Status.State = v1.BuildStateSucceeded
-	build.Status.CompletionTimestamp = &now
+	build.Status.CompletionTimestamp = now
 
 	log.Printf("build %v complete", build.ID)
 }
@@ -129,7 +130,7 @@ func (c *Controller) resolveBuildComponent(build *v1.Build, record *registry.Sys
 
 	log.Printf("resolving definition for build %v", build.ID)
 
-	t, err := c.componentResolver.Resolve(cmpnt, record.System.ID, path, ctx, resolver.DepthInfinite)
+	t, err := c.componentResolver.Resolve(cmpnt, record.System.ID, path, ctx, resolver.DefaultDepth)
 	c.registry.Lock()
 	defer c.registry.Unlock()
 
@@ -167,7 +168,7 @@ func (c *Controller) getBuildComponent(
 	record *registry.SystemRecord,
 ) (
 	tree.Path,
-	component.Interface,
+	definition.Component,
 	*git.CommitReference,
 	bool,
 ) {

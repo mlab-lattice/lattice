@@ -3,10 +3,11 @@ package app
 import (
 	goflag "flag"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/authentication/authenticator/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -20,7 +21,7 @@ func Command() *cli.RootCommand {
 
 	var (
 		port          int32
-		apiAuthKey    string
+		tokenAuthFile string
 		workDirectory string
 	)
 
@@ -33,10 +34,10 @@ func Command() *cli.RootCommand {
 					Default: 8080,
 					Target:  &port,
 				},
-				"api-auth-key": &flags.String{
-					Usage:   "if supplied, the required value of the API_KEY header",
+				"token-auth-file": &flags.String{
+					Usage:   "path for token file for bearer token authenticator",
 					Default: "",
-					Target:  &apiAuthKey,
+					Target:  &tokenAuthFile,
 				},
 				"work-directory": &flags.String{
 					Usage:   "directory used to download git repositories",
@@ -54,11 +55,27 @@ func Command() *cli.RootCommand {
 
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				backend := mockbackend.NewMockBackend(r)
-				rest.RunNewRestServer(backend, r, port, apiAuthKey)
+				// construct server options
+				options := createServerOptions(tokenAuthFile)
+				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
 		},
 	}
 
 	return command
+}
+
+func createServerOptions(tokenAuthFile string) *rest.ServerOptions {
+	options := rest.NewServerOptions()
+
+	// enable api authentication key as needed
+	if tokenAuthFile != "" {
+		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
+		if err != nil {
+			panic(err)
+		}
+		options.AuthOptions.Token = tokenAuthenticator
+	}
+	return options
 }

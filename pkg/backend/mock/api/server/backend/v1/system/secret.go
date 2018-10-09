@@ -12,8 +12,8 @@ type SecretBackend struct {
 
 // Secrets
 func (b *SecretBackend) List() ([]v1.Secret, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -22,15 +22,15 @@ func (b *SecretBackend) List() ([]v1.Secret, error) {
 
 	var secrets []v1.Secret
 	for _, secret := range record.Secrets {
-		secrets = append(secrets, *secret)
+		secrets = append(secrets, *secret.DeepCopy())
 	}
 
 	return secrets, nil
 }
 
 func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -39,9 +39,7 @@ func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
 
 	for _, secret := range record.Secrets {
 		if secret.Path == path {
-			result := new(v1.Secret)
-			*result = *secret
-			return result, nil
+			return secret.DeepCopy(), nil
 		}
 	}
 
@@ -49,8 +47,8 @@ func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
 }
 
 func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -75,8 +73,8 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 }
 
 func (b *SecretBackend) Unset(path tree.PathSubcomponent) error {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

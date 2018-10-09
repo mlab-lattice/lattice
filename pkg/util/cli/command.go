@@ -104,8 +104,12 @@ func (c *Command) addArgs() error {
 		return err
 	}
 
-	for _, arg := range c.Args {
+	for _, arg := range c.Args.Args {
 		c.cobraCmd.Use += fmt.Sprintf(" [%v]", arg.Name)
+	}
+
+	if c.Args.AllowAdditional {
+		return nil
 	}
 
 	min, max := c.Args.num()

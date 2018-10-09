@@ -23,8 +23,8 @@ func (b *BuildBackend) CreateFromVersion(v v1.Version) (*v1.Build, error) {
 }
 
 func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -38,15 +38,12 @@ func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Build)
-	*result = *build
-
-	return result, nil
+	return build.DeepCopy(), nil
 }
 
 func (b *BuildBackend) List() ([]v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -55,15 +52,15 @@ func (b *BuildBackend) List() ([]v1.Build, error) {
 
 	var builds []v1.Build
 	for _, build := range record.Builds {
-		builds = append(builds, *build.Build)
+		builds = append(builds, *build.Build.DeepCopy())
 	}
 
 	return builds, nil
 }
 
 func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -77,10 +74,7 @@ func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Build)
-	*result = *build.Build
-
-	return result, nil
+	return build.Build.DeepCopy(), nil
 }
 
 func (b *BuildBackend) Logs(

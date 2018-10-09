@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 const APIVersion = "v1"
 
-func NewComponent(m map[string]interface{}) (component.Interface, error) {
+func NewComponent(m map[string]interface{}) (definition.Component, error) {
 	data, err := json.Marshal(&m)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func NewComponent(m map[string]interface{}) (component.Interface, error) {
 	return NewComponentFromJSON(data)
 }
 
-func NewComponentFromJSON(data []byte) (component.Interface, error) {
+func NewComponentFromJSON(data []byte) (definition.Component, error) {
 	var c componentTypeDecoder
 	if err := json.Unmarshal(data, &c); err != nil {
 		return nil, fmt.Errorf("resource must have valid Type field")
@@ -63,5 +63,5 @@ func NewComponentFromJSON(data []byte) (component.Interface, error) {
 }
 
 type componentTypeDecoder struct {
-	Type component.Type `json:"type"`
+	Type definition.Type `json:"type"`
 }

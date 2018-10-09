@@ -49,7 +49,7 @@ func Update() *cli.Command {
 				context.Auth = &command.AuthContext{BearerToken: &bearerToken}
 
 			case unauthenticated:
-				context.Auth = &command.AuthContext{}
+				context.Auth = nil
 			}
 
 			// if changing the URL, unset the system as well

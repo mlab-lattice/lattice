@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver/template"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver/template"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 

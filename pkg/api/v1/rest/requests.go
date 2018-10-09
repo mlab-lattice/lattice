@@ -27,9 +27,9 @@ type DeployRequest struct {
 
 // swagger:model JobRequest
 type RunJobRequest struct {
-	Path        tree.Path                         `json:"path"`
-	Command     []string                          `json:"command,omitempty"`
-	Environment definitionv1.ContainerEnvironment `json:"environment,omitempty"`
+	Path        tree.Path                             `json:"path"`
+	Command     []string                              `json:"command,omitempty"`
+	Environment definitionv1.ContainerExecEnvironment `json:"environment,omitempty"`
 }
 
 // swagger:model SetSecretRequest

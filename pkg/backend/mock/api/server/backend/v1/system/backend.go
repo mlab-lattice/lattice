@@ -2,20 +2,18 @@ package system
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/controller"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 type Backend struct {
-	sync.Mutex
-
 	registry   *registry.Registry
 	controller *controller.Controller
 }
@@ -30,8 +28,8 @@ func NewBackend(componentResolver resolver.Interface) *Backend {
 }
 
 func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	if _, exists := b.registry.Systems[systemID]; exists {
 		return nil, v1.NewSystemAlreadyExistsError()
@@ -45,7 +43,7 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 			Status: v1.SystemStatus{
 				State: v1.SystemStatePending,
 
-				CreationTimestamp: time.Now(),
+				CreationTimestamp: *timeutil.New(time.Now()),
 			},
 		},
 		Definition: resolver.NewResolutionTree(),
@@ -69,40 +67,36 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 	b.registry.Systems[systemID] = record
 	b.controller.CreateSystem(record)
 
-	system := new(v1.System)
-	*system = *record.System
-	return system, nil
+	return record.System.DeepCopy(), nil
 }
 
 func (b *Backend) List() ([]v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	var systems []v1.System
 	for _, s := range b.registry.Systems {
-		systems = append(systems, *s.System)
+		systems = append(systems, *s.System.DeepCopy())
 	}
 
 	return systems, nil
 }
 
 func (b *Backend) Get(systemID v1.SystemID) (*v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	record, err := b.systemRecord(systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	system := new(v1.System)
-	*system = *record.System
-	return system, nil
+	return record.System.DeepCopy(), nil
 }
 
 func (b *Backend) Delete(systemID v1.SystemID) error {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	_, err := b.systemRecord(systemID)
 	if err != nil {

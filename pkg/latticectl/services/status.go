@@ -100,7 +100,7 @@ func WatchService(client client.Interface, system v1.SystemID, id v1.ServiceID, 
 
 		handle(service)
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -119,6 +119,21 @@ func serviceString(service *v1.Service) string {
 
 	case v1.ServiceStateFailed, v1.ServiceStateDeleting:
 		stateColor = color.BoldHiFailureString
+	}
+
+	updatedInstancesColor := color.NormalString
+	if service.Status.UpdatedInstances != 0 {
+		updatedInstancesColor = color.SuccessString
+	}
+
+	staleInstancesColor := color.NormalString
+	if service.Status.StaleInstances != 0 {
+		staleInstancesColor = color.WarningString
+	}
+
+	terminatingInstancesColor := color.NormalString
+	if service.Status.StaleInstances != 0 {
+		terminatingInstancesColor = color.FailureString
 	}
 
 	message := ""
@@ -164,10 +179,10 @@ func serviceString(service *v1.Service) string {
 		color.IDString(string(service.ID)),
 		service.Path.String(),
 		stateColor(string(service.Status.State)),
-		strconv.Itoa(int(service.Status.UpdatedInstances)),
-		color.SuccessString(strconv.Itoa(int(service.Status.UpdatedInstances))),
-		color.WarningString(strconv.Itoa(int(service.Status.StaleInstances))),
-		color.FailureString(strconv.Itoa(int(service.Status.TerminatingInstances))),
+		strconv.Itoa(int(service.Status.AvailableInstances)),
+		updatedInstancesColor(strconv.Itoa(int(service.Status.UpdatedInstances))),
+		staleInstancesColor(strconv.Itoa(int(service.Status.StaleInstances))),
+		terminatingInstancesColor(strconv.Itoa(int(service.Status.TerminatingInstances))),
 		message,
 		ports,
 		instances,

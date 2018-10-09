@@ -1,9 +1,8 @@
 package v1
 
 import (
-	"time"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 type (
@@ -46,6 +45,6 @@ type ServiceStatus struct {
 }
 
 type ServiceFailureInfo struct {
-	Time    time.Time
-	Message string `json:"message"`
+	Time    time.Time `json:"time"`
+	Message string    `json:"message"`
 }
