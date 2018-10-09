@@ -49,6 +49,7 @@ func Jobs() *cli.Command {
 		},
 		Subcommands: map[string]*cli.Command{
 			"run":    jobs.Run(),
+			"runs":   jobs.Runs(),
 			"status": jobs.Status(),
 		},
 	}

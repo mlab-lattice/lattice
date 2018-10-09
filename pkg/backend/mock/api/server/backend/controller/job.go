@@ -53,4 +53,5 @@ func (c *Controller) runJob(job *v1.Job, record *registry.SystemRecord) {
 	run.Status.State = v1.JobRunStateSucceeded
 	run.Status.CompletionTimestamp = now
 	run.Status.ExitCode = &zero
+	record.Jobs[job.ID].Runs[runID] = run
 }

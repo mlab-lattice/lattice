@@ -14,6 +14,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl/jobs/runs"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"time"
 )
 
 const (
@@ -134,6 +135,8 @@ func RunJob(
 			run = runs[0].ID
 			break
 		}
+
+		time.Sleep(5 * time.Second)
 	}
 
 	return runs.RunLogs(

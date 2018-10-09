@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	mockSystemID     = v1.SystemID("mock-system")
+	mockSystemID     = v1.SystemID("mock")
 	mockRepoPath     = "/tmp/lattice/test/api/server/rest/remote"
 	mockAPIServerURL = "http://localhost:8876"
 
