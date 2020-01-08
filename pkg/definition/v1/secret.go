@@ -12,7 +12,9 @@ type SecretRef struct {
 
 // ValueOrSecret contains either a value (i.e. just a string value), or a Secret.
 type ValueOrSecret struct {
-	Value     *string
+	// Value
+	Value *string
+	// Secret Reference
 	SecretRef *SecretRef
 }
 

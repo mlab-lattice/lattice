@@ -35,19 +35,33 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 
 }
 
-// handleRunJob handler for run-job
-// @ID run-job
-// @Summary Run job
-// @Description Runs a new job
-// @Router /systems/{system}/jobs [post]
-// @Security ApiKeyAuth
-// @Tags jobs
-// @Param system path string true "System ID"
-// @Param jobRequest body rest.RunJobRequest true "Create build"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Job
-// @Failure 400 {object} v1.ErrorResponse
+// swagger:operation POST /systems/{system}/jobs jobs RunJob
+//
+// Runs jobs
+//
+// This will run a new job with the provided command and environment
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - in: body
+//         schema:
+//           "$ref": "#/definitions/JobRequest"
+//     responses:
+//         default:
+//           description: Job object
+//           schema:
+//             "$ref": "#/definitions/Job"
+
+// handleRunJob handler for RunJob
 func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -81,17 +95,34 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 	c.JSON(http.StatusCreated, job)
 }
 
-// handleListJobs handler for list-jobs
-// @ID list-jobs
-// @Summary Lists jobs
-// @Description Lists all jobs
-// @Router /systems/{system}/jobs [get]
-// @Security ApiKeyAuth
-// @Tags jobs
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.Job
+// swagger:operation GET /systems/{system}/jobs jobs ListJobs
+//
+// Lists jobs
+//
+// Lists jobs for a system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: job list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/Job"
+//
+
+// handleListJobs handler for ListJobs
 func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -119,19 +150,36 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 	c.JSON(http.StatusOK, jobs)
 }
 
-// handleGetJob handler for get-job
-// @ID get-job
-// @Summary Get job
-// @Description Gets the job object
-// @Router /systems/{system}/jobs/{id} [get]
-// @Security ApiKeyAuth
-// @Tags jobs
-// @Param system path string true "System ID"
-// @Param id path string true "Job ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Job
-// @Failure 404 {object} v1.ErrorResponse
+// swagger:operation GET /systems/{system}/jobs/{jobId} jobs GetJob
+//
+// Get job
+//
+// Gets jobs details
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Job ID
+//         in: path
+//         name: jobId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: Job Object
+//           schema:
+//             "$ref": "#/definitions/Job"
+//
+// handleGetJob handler for GetJob
 func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	jobID := v1.JobID(c.Param(jobIdentifier))
@@ -160,26 +208,70 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 	c.JSON(http.StatusOK, job)
 }
 
-// handleGetJobLogs handler for get-job-logs
-// @ID get-job-logs
-// @Summary Get job logs
-// @Description Retrieves/Streams logs for job
-// @Router /systems/{system}/jobs/{id}/logs  [get]
-// @Security ApiKeyAuth
-// @Tags jobs
-// @Param system path string true "System ID"
-// @Param id path string true "Job ID"
-// @Param sidecar query string false "Sidecar"
-// @Param follow query string bool "Follow"
-// @Param previous query boolean false "Previous"
-// @Param timestamps query boolean false "Timestamps"
-// @Param tail query integer false "tail"
-// @Param since query string false "Since"
-// @Param sinceTime query string false "Since Time"
-// @Accept  json
-// @Produce  json
-// @Success 200 {string} string "log stream"
-// @Failure 404 {object} v1.ErrorResponse
+// swagger:operation GET /systems/{system}/jobs/{jobId}/logs jobs GetJobLogs
+//
+// Get job logs
+//
+// Returns a job log stream
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Job ID
+//         in: path
+//         name: jobId
+//         required: true
+//         type: string
+//       - description: Sidecar
+//         in: query
+//         name: sidecar
+//         required: false
+//         type: string
+//       - description: Follow
+//         in: query
+//         name: follow
+//         required: false
+//         type: boolean
+//       - description: Previous
+//         in: query
+//         name: previous
+//         required: false
+//         type: boolean
+//       - description: Timestamps
+//         in: query
+//         name: timestamps
+//         required: false
+//         type: boolean
+//       - description: Tail
+//         in: query
+//         name: tail
+//         required: false
+//         type: int
+//       - description: Since
+//         in: query
+//         name: since
+//         required: false
+//         type: string
+//       - description: Since Time
+//         in: query
+//         name: sinceTime
+//         required: false
+//         type: string
+//     responses:
+//         '200':
+//           description: log stream
+//           schema:
+//             type: string
+
+// handleGetJobLogs handler for GetJobLogs
 func (api *LatticeAPI) handleGetJobLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	jobID := v1.JobID(c.Param(jobIdentifier))

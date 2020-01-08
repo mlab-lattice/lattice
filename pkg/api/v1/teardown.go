@@ -16,6 +16,7 @@ const (
 	TeardownStateFailed     TeardownState = "failed"
 )
 
+// swagger:model Teardown
 type Teardown struct {
 	ID TeardownID `json:"id"`
 

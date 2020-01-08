@@ -20,6 +20,7 @@ const (
 	ServiceStateFailed   ServiceState = "failed"
 )
 
+// swagger:model Service
 type Service struct {
 	ID ServiceID `json:"id"`
 

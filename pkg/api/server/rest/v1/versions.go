@@ -20,17 +20,34 @@ func (api *LatticeAPI) setupVersionsEndpoints() {
 
 }
 
-// handleListSystemVersions handler for list-system-versions
-// @ID list-system-versions
-// @Summary Lists system versions
-// @Description List all versions of the specified system
-// @Router /systems/{system}/versions [get]
-// @Security ApiKeyAuth
-// @Tags versions
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.Version
+// swagger:operation GET /systems/{system}/versions versions ListVersions
+//
+// Lists versions
+//
+// Lists versions
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: version list
+//           schema:
+//             type: array
+//             items:
+//               type: string
+//
+
+// handleListSystemVersions handler for ListVersions
 func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 

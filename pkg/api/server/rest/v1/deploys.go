@@ -31,19 +31,33 @@ func (api *LatticeAPI) setupDeployEndpoints() {
 
 }
 
-// handleDeploySystem handler for deploy-system
-// @ID deploy-system
-// @Summary Deploy system
-// @Description Deploys the system
-// @Router /systems/{system}/deploys [post]
-// @Security ApiKeyAuth
-// @Tags deploys
-// @Param system path string true "System ID"
-// @Param deployRequest body rest.DeployRequest true "Create deploy"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Deploy
-// @Failure 400 {object} v1.ErrorResponse
+// swagger:operation POST /systems/{system}/deploys deploys DeploySystem
+//
+// Deploy system
+//
+// Deploy system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - in: body
+//         schema:
+//           "$ref": "#/definitions/DeployRequest"
+//     responses:
+//         '200':
+//           description: Build object
+//           schema:
+//             "$ref": "#/definitions/Deploy"
+
+// handleDeploySystem handler for DeploySystem
 func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -100,17 +114,34 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	c.JSON(http.StatusCreated, deploy)
 }
 
-// handleListDeploys handler for list-deploys
-// @ID list-deploys
-// @Summary List deploys
-// @Description Lists all deploys of the system
-// @Router /systems/{system}/deploys [get]
-// @Security ApiKeyAuth
-// @Tags deploys
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.Deploy
+// swagger:operation GET /systems/{system}/deploys deploys ListDeploys
+//
+// Lists deploys
+//
+// Lists deploys
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: deploy list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/Deploy"
+//
+
+// handleListDeploys handler for ListDeploys
 func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -138,19 +169,37 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 	c.JSON(http.StatusOK, deploys)
 }
 
-// handleGetDeploy handler for get-deploy
-// @ID get-deploy
-// @Summary Get deploy
-// @Description Gets the deploy object
-// @Router /systems/{system}/deploys/{id} [get]
-// @Security ApiKeyAuth
-// @Tags deploys
-// @Param system path string true "System ID"
-// @Param id path string true "Deploy ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Deploy
-// @Failure 404 {object} v1.ErrorResponse
+// swagger:operation GET /systems/{system}/deploys/{deployId} deploys GetDeploy
+//
+// Get deploy
+//
+// Get deploy
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Deploy ID
+//         in: path
+//         name: deployId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: Deploy Object
+//           schema:
+//             "$ref": "#/definitions/Deploy"
+//
+
+// handleGetDeploy handler for GetDeploy
 func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	deployID := v1.DeployID(c.Param(deployIdentifier))

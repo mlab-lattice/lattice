@@ -19,6 +19,7 @@ const (
 	BuildStateFailed    BuildState = "failed"
 )
 
+// swagger:model Build
 type Build struct {
 	ID BuildID `json:"id"`
 

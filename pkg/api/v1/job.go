@@ -21,6 +21,7 @@ const (
 	JobStateFailed    JobState = "failed"
 )
 
+// swagger:model Job
 type Job struct {
 	ID   JobID     `json:"id"`
 	Path tree.Path `json:"path"`

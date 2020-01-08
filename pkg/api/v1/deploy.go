@@ -18,6 +18,7 @@ const (
 	DeployStateFailed     DeployState = "failed"
 )
 
+// swagger:model Deploy
 type Deploy struct {
 	ID DeployID `json:"id"`
 

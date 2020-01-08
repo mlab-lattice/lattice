@@ -33,17 +33,34 @@ func (api *LatticeAPI) setupServicesEndpoints() {
 
 }
 
-// handleListServices handler for list-services
-// @ID list-services
-// @Summary Lists services
-// @Description Lists all services running in the system
-// @Router /systems/{system}/services [get]
-// @Security ApiKeyAuth
-// @Tags services
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.Service
+// swagger:operation GET /systems/{system}/services services ListServices
+//
+// Lists services
+//
+// Lists services
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: service list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/Service"
+//
+
+// handleListServices handler for ListServices
 func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	servicePathParam := c.Query("path")
@@ -104,19 +121,37 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	c.JSON(http.StatusOK, services)
 }
 
-// handleGetService handler for get-service
-// @ID get-service
-// @Summary Get service
-// @Description Gets the service object
-// @Router /systems/{system}/services/{id} [get]
-// @Security ApiKeyAuth
-// @Tags services
-// @Param system path string true "System ID"
-// @Param id path string true "Service ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Service
-// @Failure 404 {object} v1.ErrorResponse
+// swagger:operation GET /systems/{system}/build/{serviceId} services GetService
+//
+// Get service
+//
+// Get service
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Service ID
+//         in: path
+//         name: serviceId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: Service Object
+//           schema:
+//             "$ref": "#/definitions/Service"
+//
+
+// handleGetService handler for GetService
 func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	serviceID := v1.ServiceID(c.Param(serviceIdentifier))
@@ -142,27 +177,75 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	c.JSON(http.StatusOK, service)
 }
 
-// handleGetServiceLogs handler for get-service-logs
-// @ID get-service-logs
-// @Summary Get service logs
-// @Description Retrieves/Streams logs for service
-// @Router /systems/{system}/services/{id}/logs  [get]
-// @Security ApiKeyAuth
-// @Tags services
-// @Param system path string true "System ID"
-// @Param id path string true "Service ID"
-// @Param instance query string true "Instance"
-// @Param sidecar query string false "Sidecar"
-// @Param follow query string bool "Follow"
-// @Param previous query boolean false "Previous"
-// @Param timestamps query boolean false "Timestamps"
-// @Param tail query integer false "tail"
-// @Param since query string false "Since"
-// @Param sinceTime query string false "Since Time"
-// @Accept  json
-// @Produce  json
-// @Success 200 {string} string "log stream"
-// @Failure 404 {object} v1.ErrorResponse
+// swagger:operation GET /systems/{system}/services/{serviceId}/logs services GetServiceLogs
+//
+// Get service logs
+//
+// Returns a service log stream
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Service ID
+//         in: path
+//         name: serviceId
+//         required: true
+//         type: string
+//       - description: Instance
+//         in: query
+//         name: instance
+//         required: false
+//         type: string
+//       - description: Sidecar
+//         in: query
+//         name: sidecar
+//         required: false
+//         type: string
+//       - description: Follow
+//         in: query
+//         name: follow
+//         required: false
+//         type: boolean
+//       - description: Previous
+//         in: query
+//         name: previous
+//         required: false
+//         type: boolean
+//       - description: Timestamps
+//         in: query
+//         name: timestamps
+//         required: false
+//         type: boolean
+//       - description: Tail
+//         in: query
+//         name: tail
+//         required: false
+//         type: int
+//       - description: Since
+//         in: query
+//         name: since
+//         required: false
+//         type: string
+//       - description: Since Time
+//         in: query
+//         name: sinceTime
+//         required: false
+//         type: string
+//     responses:
+//         '200':
+//           description: log stream
+//           schema:
+//             type: string
+
+// handleGetServiceLogs handler for GetServiceLogs
 func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	serviceId := v1.ServiceID(c.Param(serviceIdentifier))
